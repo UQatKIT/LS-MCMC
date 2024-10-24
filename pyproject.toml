@@ -8,6 +8,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "numpy>=2.1.2",
+    "zarr>=2.18.3",
 ]
 
 [project.optional-dependencies]
@@ -28,6 +29,9 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["ALL"]
-ignore = ["EM101", "EM102", "TRY003", "COM812", "RET504", "S101", "PD008"]
+ignore = [
+    "EM101", "EM102", "TRY003", "COM812", "RET504", "S101", "PD008", "TRY401", "B012", "FBT001",
+    "ANN401"
+]
 pydocstyle.convention = "google"
 

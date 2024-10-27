@@ -1,5 +1,4 @@
 
 
-
-class MCMCStatistics:
+class MCMCOutput:
     pass

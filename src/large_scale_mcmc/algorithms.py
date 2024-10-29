@@ -30,6 +30,7 @@ class MCMCAlgorithm(ABC):
         self._cache_args(computed_args)
         new_state, computed_args, accepted = self._perform_accept_reject(current_state, proposal)
         computed_args = self._choose_args_to_cache(computed_args, accepted)
+        self._cache_args(computed_args)
         return new_state, accepted
 
     # ----------------------------------------------------------------------------------------------
@@ -45,6 +46,11 @@ class MCMCAlgorithm(ABC):
             new_state = current_state
             accepted = False
         return new_state, computed_args, accepted
+
+    # ----------------------------------------------------------------------------------------------
+    @property
+    def rngs(self):
+        return self._proposal_rng, self._accept_reject_rng
 
     # ----------------------------------------------------------------------------------------------
     @staticmethod

@@ -2,7 +2,7 @@ import logging
 import sys
 from dataclasses import dataclass
 
-from . import statistics
+from . import output
 
 
 # ==================================================================================================
@@ -39,18 +39,18 @@ class MCMCLogger:
                 self._pylogger.addHandler(file_handler)
 
     # ----------------------------------------------------------------------------------------------
-    def log_header(self, outputs: tuple[statistics.MCMCOutput]) -> None:
-        log_header_str = ""
-        for output in outputs:
-            log_header_str += f"{output.str_id}| "
+    def log_header(self, outputs: tuple[output.MCMCOutput]) -> None:
+        log_header_str = f"{'Iteration':<12}| {'Time':<12}| "
+        for out in outputs:
+            log_header_str += f"{out.str_id}| "
         self.info(log_header_str)
         self.info("-" * (len(log_header_str) - 1))
 
     # ----------------------------------------------------------------------------------------------
-    def log_outputs(self, outputs: statistics.MCMCOutput, iteration: int) -> None:
-        output_str = ""
-        for output in outputs:
-            value_str = f"{outputs.value:{output.str_format}}"
+    def log_outputs(self, outputs: output.MCMCOutput, iteration: int, time: float) -> None:
+        output_str = f"{iteration:<12.3e}| {time:<12.3e}| "
+        for out in outputs:
+            value_str = f"{out.value:{out.str_format}}"
             output_str += f"{value_str}| "
         self.info(output_str)
 

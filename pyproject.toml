@@ -1,5 +1,5 @@
 [project]
-name = "large-scale-mcmc"
+name = "lsmcmc"
 version = "0.1.0"
 authors = [{name = "Maximilian Kruse", email = "maximilian.kruse@kit.edu"}]
 description = "Add a short description here"
@@ -17,6 +17,10 @@ style = [
 ]
 notebook = [
     "jupyter>=1.1.1",
+]
+visualization = [
+    "matplotlib>=3.9.2",
+    "seaborn>=0.13.2",
 ]
 
 [build-system]

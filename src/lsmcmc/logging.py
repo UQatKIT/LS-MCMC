@@ -40,17 +40,19 @@ class MCMCLogger:
 
     # ----------------------------------------------------------------------------------------------
     def log_header(self, outputs: tuple[output.MCMCOutput]) -> None:
-        log_header_str = f"{'Iteration':<12}| {'Time':<12}| "
+        log_header_str = f"| {'Iteration':<12}| {'Time':<12}| "
         for out in outputs:
-            log_header_str += f"{out.str_id}| "
+            if out.log:
+                log_header_str += f"{out.str_id}| "
         self.info(log_header_str)
         self.info("-" * (len(log_header_str) - 1))
 
     # ----------------------------------------------------------------------------------------------
     def log_outputs(self, outputs: output.MCMCOutput, iteration: int, time: float) -> None:
-        output_str = f"{iteration:<12.3e}| {time:<12.3e}| "
+        output_str = f"| {iteration:<12.3e}| {time:<12.3e}| "
         for out in outputs:
-            value_str = f"{out.value:{out.str_format}}"
+            if out.log:
+                value_str = f"{out.value:{out.str_format}}"
             output_str += f"{value_str}| "
         self.info(output_str)
 

@@ -22,9 +22,9 @@ class Sampler:
         self,
         algorithm: algorithms.MCMCAlgorithm,
         sample_storage: storage.MCMCStorage,
-        outputs: output.MCMCOutput,
+        outputs: tuple[output.MCMCOutput],
         logger: logging.MCMCLogger,
-    ):
+    ) -> None:
         self._algorithm = algorithm
         self._samples = sample_storage
         self._outputs = outputs
@@ -34,7 +34,9 @@ class Sampler:
         self._start_time = None
 
     # ----------------------------------------------------------------------------------------------
-    def run(self, run_settings: SamplerRunSettings):
+    def run(
+        self, run_settings: SamplerRunSettings
+    ) -> tuple[storage.MCMCStorage, tuple[output.MCMCOutput]]:
         current_state = run_settings.initial_state
         self._num_samples = run_settings.num_samples
         self._print_interval = run_settings.print_interval
@@ -53,19 +55,17 @@ class Sampler:
             return self._samples, self._outputs
 
     # ----------------------------------------------------------------------------------------------
-    def _run_utilities(self, iteration: int, state: np.ndarray, accepted: bool):
-        for output in self._outputs:
-            output.update(state, accepted)
+    def _run_utilities(self, it: int, state: np.ndarray, accepted: bool) -> None:
+        store_values = (it % self._store_interval == 0) or (it == self._num_samples + 1)
+        log_values = (it % self._print_interval == 0) or (it == self._num_samples + 1)
 
-        store_values = (iteration % self._store_interval == 0) or (
-            iteration == self._num_samples + 1
-        )
-        log_values = (iteration % self._print_interval == 0) or (iteration == self._num_samples + 1)
+        for out in self._outputs:
+            out.update(state, accepted)
 
         if self._samples and store_values:
             self._samples.store(state)
         if self._logger and log_values:
-            if iteration == 0:
+            if it == 0:
                 self._logger.log_header(self._outputs)
-            current_time = time.time() - self._start_time
-            self._logger.log_outputs(self._outputs, iteration, current_time)
+            runtime = time.time() - self._start_time
+            self._logger.log_outputs(self._outputs, it, runtime)

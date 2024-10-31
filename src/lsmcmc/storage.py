@@ -1,6 +1,6 @@
 import pathlib
 from abc import ABC, abstractmethod
-from typing import Any
+from collections.abc import Iterable
 
 import numpy as np
 import zarr
@@ -9,7 +9,7 @@ import zarr
 # ==================================================================================================
 class MCMCStorage(ABC):
     # ----------------------------------------------------------------------------------------------
-    def __init__(self):
+    def __init__(self) -> None:
         self._samples = []
 
     # ----------------------------------------------------------------------------------------------
@@ -20,7 +20,7 @@ class MCMCStorage(ABC):
     # ----------------------------------------------------------------------------------------------
     @property
     @abstractmethod
-    def values(self) -> Any:
+    def values(self) -> Iterable:
         pass
 
 
@@ -37,7 +37,6 @@ class NumpyStorage(MCMCStorage):
         return stacked_samples
 
 
-
 # ==================================================================================================
 class ZarrStorage(MCMCStorage):
     # ----------------------------------------------------------------------------------------------
@@ -47,7 +46,7 @@ class ZarrStorage(MCMCStorage):
         self._save_directory.parent.mkdir(parents=True, exist_ok=True)
         self._chunk_size = chunk_size
         self._storage_group = zarr.group(store=f"{self._save_directory}.zarr", overwrite=True)
-        self._storage = self._storage_group.create_dataset("values", shape=1, dtype=np.float64)
+        self._storage = None
 
     # ----------------------------------------------------------------------------------------------
     def store(self, sample: np.ndarray) -> None:
@@ -58,7 +57,7 @@ class ZarrStorage(MCMCStorage):
 
     # ----------------------------------------------------------------------------------------------
     @property
-    def values(self) -> np.ndarray:
+    def values(self) -> zarr.array:
         self._save_to_disk()
         self._samples.clear()
         return self._storage
@@ -66,8 +65,10 @@ class ZarrStorage(MCMCStorage):
     # ----------------------------------------------------------------------------------------------
     def _save_to_disk(self) -> None:
         samples_to_store = np.stack(self._samples, axis=-1)
-        if self._storage.shape[-1] == 1:
-            self._storage.resize(samples_to_store.shape)
+        if self._storage is None:
+            self._storage = self._storage_group.create_dataset(
+                "values", shape=samples_to_store.shape, dtype=np.float64
+            )
             self._storage[:] = samples_to_store
         else:
             self._storage.append(samples_to_store, axis=-1)

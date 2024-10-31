@@ -66,6 +66,8 @@ class RunningMeanStatistic(MCMCStatistic):
 # --------------------------------------------------------------------------------------------------
 class BatchMeanStatistic(MCMCStatistic):
     def __init__(self, batch_size: int) -> None:
+        if batch_size <= 0:
+            raise ValueError("Batch size must be greater than zero.")
         self._running_value = 0
         self._num_samples = 0
         self._batch_size = batch_size
@@ -83,8 +85,17 @@ class BatchMeanStatistic(MCMCStatistic):
 # ==================================================================================================
 class MCMCOutput:
     def __init__(
-        self, qoi: MCMCQoI, statistic: MCMCStatistic, str_id: str, str_format: str, log: bool
+        self,
+        qoi: MCMCQoI,
+        statistic: MCMCStatistic,
+        str_id: str | None = None,
+        str_format: str | None = None,
+        log: bool = False,
     ) -> None:
+        if log and str_id is None:
+            raise ValueError("String ID must be provided if output is to be logged.")
+        if log and str_format is None:
+            raise ValueError("String format must be provided if output is to be logged.")
         self.str_id = str_id
         self.str_format = str_format
         self._qoi = qoi

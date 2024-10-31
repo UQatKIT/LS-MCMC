@@ -40,11 +40,13 @@ class NumpyStorage(MCMCStorage):
 # ==================================================================================================
 class ZarrStorage(MCMCStorage):
     # ----------------------------------------------------------------------------------------------
-    def __init__(self, save_directory: str | pathlib.Path, chunk_size: int) -> None:
+    def __init__(self, save_directory: pathlib.Path, chunk_size: int) -> None:
+        if chunk_size <= 0:
+            raise ValueError("Chunk size must be greater than zero.")
         super().__init__()
-        self._save_directory = pathlib.Path(save_directory) if save_directory else None
-        self._save_directory.parent.mkdir(parents=True, exist_ok=True)
+        self._save_directory = save_directory
         self._chunk_size = chunk_size
+        self._save_directory.parent.mkdir(parents=True, exist_ok=True)
         self._storage_group = zarr.group(store=f"{self._save_directory}.zarr", overwrite=True)
         self._storage = None
 

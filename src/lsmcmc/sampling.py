@@ -1,4 +1,5 @@
 import time
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 import numpy as np
@@ -21,13 +22,13 @@ class Sampler:
     def __init__(
         self,
         algorithm: algorithms.MCMCAlgorithm,
-        sample_storage: storage.MCMCStorage,
-        outputs: tuple[output.MCMCOutput],
-        logger: logging.MCMCLogger,
+        sample_storage: storage.MCMCStorage | None = None,
+        outputs: Iterable[output.MCMCOutput] | None = None,
+        logger: logging.MCMCLogger | None = None,
     ) -> None:
         self._algorithm = algorithm
         self._samples = sample_storage
-        self._outputs = outputs
+        self._outputs = outputs if outputs is not None else []
         self._logger = logger
         self._print_interval = None
         self._store_interval = None
@@ -36,7 +37,18 @@ class Sampler:
     # ----------------------------------------------------------------------------------------------
     def run(
         self, run_settings: SamplerRunSettings
-    ) -> tuple[storage.MCMCStorage, tuple[output.MCMCOutput]]:
+    ) -> tuple[storage.MCMCStorage, Iterable[output.MCMCOutput]]:
+        if run_settings.num_samples <= 0:
+            raise ValueError("Number of samples must be greater than zero.")
+        if run_settings.print_interval <= 0:
+            raise ValueError("Print interval must be greater than zero.")
+        if run_settings.store_interval <= 0:
+            raise ValueError("Store interval must be greater than zero.")
+        if run_settings.print_interval > run_settings.num_samples:
+            raise ValueError("Print interval must be less than the number of samples.")
+        if run_settings.store_interval > run_settings.num_samples:
+            raise ValueError("Store interval must be less than the number of samples.")
+
         current_state = run_settings.initial_state
         self._num_samples = run_settings.num_samples
         self._print_interval = run_settings.print_interval
@@ -56,12 +68,12 @@ class Sampler:
 
     # ----------------------------------------------------------------------------------------------
     def _run_utilities(self, it: int, state: np.ndarray, accepted: bool) -> None:
+        assert it >= 0, f"Iteration number must be non-negative, but has value{it}"
         store_values = (it % self._store_interval == 0) or (it == self._num_samples + 1)
         log_values = (it % self._print_interval == 0) or (it == self._num_samples + 1)
 
         for out in self._outputs:
             out.update(state, accepted)
-
         if self._samples and store_values:
             self._samples.store(state)
         if self._logger and log_values:

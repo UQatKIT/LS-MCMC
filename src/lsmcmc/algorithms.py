@@ -18,6 +18,8 @@ class AlgorithmSettings:
 class MCMCAlgorithm(ABC):
     # ----------------------------------------------------------------------------------------------
     def __init__(self, settings: AlgorithmSettings, model: model.MCMCModel) -> None:
+        if settings.step_width <= 0:
+            raise ValueError("Step width must be greater than zero.")
         self._proposal_rng = settings.proposal_rng
         self._accept_reject_rng = settings.accept_reject_rng
         self._step_width = settings.step_width
@@ -37,6 +39,10 @@ class MCMCAlgorithm(ABC):
     def _perform_accept_reject(
         self, current_state: np.ndarray, proposal: np.ndarray
     ) -> tuple[np.ndarray, dict, bool]:
+        assert current_state.shape == proposal.shape, (
+            f"Current state and proposal must have the same shape, but they have shapes"
+            f"{current_state.shape} and {proposal.shape}, respectively."
+        )
         acceptance_probability, computed_args = self._evaluate_acceptance_probability(
             current_state, proposal
         )
@@ -90,10 +96,9 @@ class pCNAlgorithm(MCMCAlgorithm):
     def _create_proposal(self, state: np.ndarray) -> tuple[np.ndarray, dict]:
         random_increment = self._proposal_rng.normal(size=state.shape)
         random_increment = self._model.compute_preconditioner_sqrt_action(random_increment)
-        ref_point = self._model.reference_point
         proposal = (
-            ref_point
-            + np.sqrt(1 - self._step_width**2) * (state - ref_point)
+            self._model.reference_point
+            + np.sqrt(1 - self._step_width**2) * (state - self._model.reference_point)
             + self._step_width * random_increment
         )
         computed_args = {}
@@ -103,6 +108,10 @@ class pCNAlgorithm(MCMCAlgorithm):
     def _evaluate_acceptance_probability(
         self, current_state: np.ndarray, proposal: np.ndarray
     ) -> tuple[float, dict]:
+        assert current_state.shape == proposal.shape, (
+            f"Current state and proposal must have the same shape, but they have shapes"
+            f"{current_state.shape} and {proposal.shape}, respectively."
+        )
         if self._cached_args["potential"] is None:
             potential_current = self._model.evaluate_potential(current_state)
         else:

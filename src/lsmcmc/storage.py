@@ -15,13 +15,13 @@ class MCMCStorage(ABC):
     # ----------------------------------------------------------------------------------------------
     @abstractmethod
     def store(self, sample: np.ndarray) -> None:
-        pass
+        raise NotImplementedError
 
     # ----------------------------------------------------------------------------------------------
     @property
     @abstractmethod
     def values(self) -> Iterable:
-        pass
+        raise NotImplementedError
 
 
 # ==================================================================================================

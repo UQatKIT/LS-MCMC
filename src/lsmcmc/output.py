@@ -8,7 +8,8 @@ import numpy as np
 class MCMCQoI(ABC):
     @abstractmethod
     def evaluate(self, state: np.ndarray, accepted: bool) -> Number:
-        pass
+        """_summary_."""
+        raise NotImplementedError
 
 
 # --------------------------------------------------------------------------------------------------
@@ -16,7 +17,7 @@ class ComponentQoI(MCMCQoI):
     def __init__(self, component: int) -> None:
         self._component = component
 
-    def evaluate(self, state: np.ndarray, _: bool) -> float:
+    def evaluate(self, state: np.ndarray, _accepted: bool) -> float:
         return state[self._component]
 
 
@@ -38,7 +39,8 @@ class AcceptanceQoI(MCMCQoI):
 class MCMCStatistic(ABC):
     @abstractmethod
     def evaluate(self, qoi_value: Number) -> Number:
-        pass
+        """_summary_."""
+        raise NotImplementedError
 
 
 # --------------------------------------------------------------------------------------------------

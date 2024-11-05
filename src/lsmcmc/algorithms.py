@@ -75,14 +75,14 @@ class MCMCAlgorithm(ABC):
     # ----------------------------------------------------------------------------------------------
     @abstractmethod
     def _create_proposal(self, state: np.ndarray) -> np.ndarray:
-        pass
+        raise NotImplementedError
 
     # ----------------------------------------------------------------------------------------------
     @abstractmethod
     def _evaluate_acceptance_probability(
         self, current_state: np.ndarray, proposal: np.ndarray
     ) -> float:
-        pass
+        raise NotImplementedError
 
 
 # ==================================================================================================

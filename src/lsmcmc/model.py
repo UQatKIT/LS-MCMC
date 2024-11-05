@@ -8,13 +8,13 @@ class MCMCModel(ABC):
 
     @abstractmethod
     def evaluate_potential(self, state: np.ndarray) -> float:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def compute_preconditioner_sqrt_action(self, state: np.ndarray) -> np.ndarray:
-        pass
+        raise NotImplementedError
 
     @property
     @abstractmethod
     def reference_point(self) -> np.ndarray:
-        pass
+        raise NotImplementedError

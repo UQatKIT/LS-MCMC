@@ -41,5 +41,3 @@ def plot_density(x_value, y_value, density):
     ax.set_xlabel(r"$\theta_1$")
     ax.set_ylabel(r"$\theta_2$")
     plt.show()
-
-    

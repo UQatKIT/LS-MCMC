@@ -5,7 +5,6 @@ import numpy as np
 
 # ==================================================================================================
 class MCMCModel(ABC):
-
     @abstractmethod
     def evaluate_potential(self, state: np.ndarray) -> float:
         raise NotImplementedError

@@ -27,7 +27,9 @@ class MCMCAlgorithm(ABC):
         self._cached_args = {}
 
     # ----------------------------------------------------------------------------------------------
-    def compute_step(self, current_state: np.ndarray) -> tuple[np.ndarray, bool]:
+    def compute_step(
+        self, current_state: np.ndarray[tuple[int], np.dtype[np.floating]]
+    ) -> tuple[np.ndarray[tuple[int], np.dtype[np.floating]], bool]:
         proposal, computed_args = self._create_proposal(current_state)
         self._cache_args(computed_args)
         new_state, computed_args, accepted = self._perform_accept_reject(current_state, proposal)
@@ -37,8 +39,10 @@ class MCMCAlgorithm(ABC):
 
     # ----------------------------------------------------------------------------------------------
     def _perform_accept_reject(
-        self, current_state: np.ndarray, proposal: np.ndarray
-    ) -> tuple[np.ndarray, dict, bool]:
+        self,
+        current_state: np.ndarray[tuple[int], np.dtype[np.floating]],
+        proposal: np.ndarray[tuple[int], np.dtype[np.floating]],
+    ) -> tuple[np.ndarray[tuple[int], np.dtype[np.floating]], dict, bool]:
         assert current_state.shape == proposal.shape, (
             f"Current state and proposal must have the same shape, but they have shapes"
             f"{current_state.shape} and {proposal.shape}, respectively."
@@ -74,13 +78,17 @@ class MCMCAlgorithm(ABC):
 
     # ----------------------------------------------------------------------------------------------
     @abstractmethod
-    def _create_proposal(self, state: np.ndarray) -> np.ndarray:
+    def _create_proposal(
+        self, state: np.ndarray[tuple[int], np.dtype[np.floating]]
+    ) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
         raise NotImplementedError
 
     # ----------------------------------------------------------------------------------------------
     @abstractmethod
     def _evaluate_acceptance_probability(
-        self, current_state: np.ndarray, proposal: np.ndarray
+        self,
+        current_state: np.ndarray[tuple[int], np.dtype[np.floating]],
+        proposal: np.ndarray[tuple[int], np.dtype[np.floating]],
     ) -> float:
         raise NotImplementedError
 
@@ -93,7 +101,9 @@ class pCNAlgorithm(MCMCAlgorithm):
         self._cached_args = {"potential": None}
 
     # ----------------------------------------------------------------------------------------------
-    def _create_proposal(self, state: np.ndarray) -> tuple[np.ndarray, dict]:
+    def _create_proposal(
+        self, state: np.ndarray[tuple[int], np.dtype[np.floating]]
+    ) -> tuple[np.ndarray[tuple[int], np.dtype[np.floating]], dict]:
         random_increment = self._proposal_rng.normal(size=state.shape)
         random_increment = self._model.compute_preconditioner_sqrt_action(random_increment)
         proposal = (
@@ -106,7 +116,9 @@ class pCNAlgorithm(MCMCAlgorithm):
 
     # ----------------------------------------------------------------------------------------------
     def _evaluate_acceptance_probability(
-        self, current_state: np.ndarray, proposal: np.ndarray
+        self,
+        current_state: np.ndarray[tuple[int], np.dtype[np.floating]],
+        proposal: np.ndarray[tuple[int], np.dtype[np.floating]],
     ) -> tuple[float, dict]:
         assert current_state.shape == proposal.shape, (
             f"Current state and proposal must have the same shape, but they have shapes"

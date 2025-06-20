@@ -14,7 +14,7 @@ class MCMCStorage(ABC):
 
     # ----------------------------------------------------------------------------------------------
     @abstractmethod
-    def store(self, sample: np.ndarray) -> None:
+    def store(self, sample: np.ndarray[tuple[int], np.dtype[np.floating]]) -> None:
         raise NotImplementedError
 
     # ----------------------------------------------------------------------------------------------
@@ -27,12 +27,12 @@ class MCMCStorage(ABC):
 # ==================================================================================================
 class NumpyStorage(MCMCStorage):
     # ----------------------------------------------------------------------------------------------
-    def store(self, sample: np.ndarray) -> None:
+    def store(self, sample: np.ndarray[tuple[int], np.dtype[np.floating]]) -> None:
         self._samples.append(sample)
 
     # ----------------------------------------------------------------------------------------------
     @property
-    def values(self) -> np.ndarray:
+    def values(self) -> np.ndarray[tuple[int, int], np.dtype[np.floating]]:
         stacked_samples = np.stack(self._samples, axis=-1)
         return stacked_samples
 
@@ -51,7 +51,7 @@ class ZarrStorage(MCMCStorage):
         self._storage = None
 
     # ----------------------------------------------------------------------------------------------
-    def store(self, sample: np.ndarray) -> None:
+    def store(self, sample: np.ndarray[tuple[int], np.dtype[np.floating]]) -> None:
         self._samples.append(sample)
         if len(self._result_list) >= self._chunk_size:
             self._save_to_disk()

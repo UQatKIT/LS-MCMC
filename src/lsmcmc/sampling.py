@@ -11,7 +11,7 @@ from . import algorithms, logging, output, storage
 @dataclass
 class SamplerRunSettings:
     num_samples: int
-    initial_state: np.ndarray
+    initial_state: np.ndarray[tuple[int], np.dtype[np.floating]]
     print_interval: int
     store_interval: int
 
@@ -67,7 +67,9 @@ class Sampler:
             return self._samples, self._outputs
 
     # ----------------------------------------------------------------------------------------------
-    def _run_utilities(self, it: int, state: np.ndarray, accepted: bool) -> None:
+    def _run_utilities(
+        self, it: int, state: np.ndarray[tuple[int], np.dtype[np.floating]], accepted: bool
+    ) -> None:
         assert it >= 0, f"Iteration number must be non-negative, but has value{it}"
         store_values = (it % self._store_interval == 0) or (it == self._num_samples + 1)
         log_values = (it % self._print_interval == 0) or (it == self._num_samples + 1)

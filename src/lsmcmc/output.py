@@ -168,7 +168,7 @@ class Acceptance(MCMCOutput):
             qoi=AcceptanceQoI(),
             statistic=RunningMeanStatistic(),
             str_id=f"{'Acceptance':<12}",
-            str_format="<+12.3e",
+            str_format="<12.4",
             log=True,
         )
 

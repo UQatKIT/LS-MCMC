@@ -78,8 +78,8 @@ testpaths = ["test"]
 addopts = [
     "-v",
     "--import-mode=importlib",
-    "--cov=ls-mcmc",
-    "--cov-config=.coveragerc",
+#    "--cov=ls-mcmc",
+#    "--cov-config=.coveragerc",
 ]
 markers = [
     "unit: unit tests",

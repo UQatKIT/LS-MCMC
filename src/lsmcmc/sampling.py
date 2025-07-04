@@ -25,6 +25,7 @@ class Sampler:
         sample_storage: storage.MCMCStorage | None = None,
         outputs: Iterable[output.MCMCOutput] | None = None,
         logger: logging.MCMCLogger | None = None,
+        seed: int = 0,
     ) -> None:
         self._algorithm = algorithm
         self._samples = sample_storage
@@ -33,6 +34,7 @@ class Sampler:
         self._print_interval = None
         self._store_interval = None
         self._start_time = None
+        self._rng = np.random.default_rng(seed=seed)
 
     # ----------------------------------------------------------------------------------------------
     def run(
@@ -58,7 +60,7 @@ class Sampler:
 
         try:
             for i in range(1, self._num_samples):
-                new_state, accepted = self._algorithm.compute_step(current_state)
+                new_state, accepted = self._algorithm.compute_step(current_state, self._rng)
                 self._run_utilities(i, new_state, accepted=accepted)
                 current_state = new_state
         except BaseException as exc:

@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 
 import numpy as np
 
@@ -7,32 +6,24 @@ from . import model
 
 
 # ==================================================================================================
-@dataclass
-class AlgorithmSettings:
-    step_width: float
-    proposal_rng: np.random.Generator
-    accept_reject_rng: np.random.Generator
-
-
-# ==================================================================================================
 class MCMCAlgorithm(ABC):
     # ----------------------------------------------------------------------------------------------
-    def __init__(self, settings: AlgorithmSettings, model: model.MCMCModel) -> None:
-        if settings.step_width <= 0:
+    def __init__(self, model: model.MCMCModel, step_width: float) -> None:
+        if step_width <= 0:
             raise ValueError("Step width must be greater than zero.")
-        self._proposal_rng = settings.proposal_rng
-        self._accept_reject_rng = settings.accept_reject_rng
-        self._step_width = settings.step_width
+        self._step_width = step_width
         self._model = model
         self._cached_args = {}
 
     # ----------------------------------------------------------------------------------------------
     def compute_step(
-        self, current_state: np.ndarray[tuple[int], np.dtype[np.floating]]
+        self, current_state: np.ndarray[tuple[int], np.dtype[np.floating]], rng: np.random.Generator
     ) -> tuple[np.ndarray[tuple[int], np.dtype[np.floating]], bool]:
-        proposal, computed_args = self._create_proposal(current_state)
+        proposal, computed_args = self._create_proposal(current_state, rng)
         self._cache_args(computed_args)
-        new_state, computed_args, accepted = self._perform_accept_reject(current_state, proposal)
+        new_state, computed_args, accepted = self._perform_accept_reject(
+            current_state, proposal, rng
+        )
         computed_args = self._choose_args_to_cache(computed_args, accepted)
         self._cache_args(computed_args)
         return new_state, accepted
@@ -42,6 +33,7 @@ class MCMCAlgorithm(ABC):
         self,
         current_state: np.ndarray[tuple[int], np.dtype[np.floating]],
         proposal: np.ndarray[tuple[int], np.dtype[np.floating]],
+        rng: np.random.Generator,
     ) -> tuple[np.ndarray[tuple[int], np.dtype[np.floating]], dict, bool]:
         assert current_state.shape == proposal.shape, (
             f"Current state and proposal must have the same shape, but they have shapes"
@@ -50,7 +42,7 @@ class MCMCAlgorithm(ABC):
         acceptance_probability, computed_args = self._evaluate_acceptance_probability(
             current_state, proposal
         )
-        random_draw = self._accept_reject_rng.uniform()
+        random_draw = rng.uniform()
         if random_draw < acceptance_probability:
             new_state = proposal
             accepted = True
@@ -58,11 +50,6 @@ class MCMCAlgorithm(ABC):
             new_state = current_state
             accepted = False
         return new_state, computed_args, accepted
-
-    # ----------------------------------------------------------------------------------------------
-    @property
-    def rngs(self) -> tuple[np.random.Generator, np.random.Generator]:
-        return self._proposal_rng, self._accept_reject_rng
 
     # ----------------------------------------------------------------------------------------------
     @staticmethod
@@ -79,7 +66,7 @@ class MCMCAlgorithm(ABC):
     # ----------------------------------------------------------------------------------------------
     @abstractmethod
     def _create_proposal(
-        self, state: np.ndarray[tuple[int], np.dtype[np.floating]]
+        self, state: np.ndarray[tuple[int], np.dtype[np.floating]], rng: np.random.Generator
     ) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
         raise NotImplementedError
 
@@ -96,15 +83,15 @@ class MCMCAlgorithm(ABC):
 # ==================================================================================================
 class pCNAlgorithm(MCMCAlgorithm):
     # ----------------------------------------------------------------------------------------------
-    def __init__(self, settings: AlgorithmSettings, model: model.MCMCModel) -> None:
-        super().__init__(settings, model)
+    def __init__(self, model: model.MCMCModel, step_width: float) -> None:
+        super().__init__(model, step_width)
         self._cached_args = {"potential": None}
 
     # ----------------------------------------------------------------------------------------------
     def _create_proposal(
-        self, state: np.ndarray[tuple[int], np.dtype[np.floating]]
+        self, state: np.ndarray[tuple[int], np.dtype[np.floating]], rng: np.random.Generator
     ) -> tuple[np.ndarray[tuple[int], np.dtype[np.floating]], dict]:
-        random_increment = self._proposal_rng.normal(size=state.shape)
+        random_increment = rng.normal(size=state.shape)
         random_increment = self._model.compute_preconditioner_sqrt_action(random_increment)
         proposal = (
             self._model.reference_point

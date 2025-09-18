@@ -3,8 +3,12 @@ from pathlib import Path
 
 from lsmcmc import algorithms, logging, output, sampling, storage, model
 
+
 class BananaModel(model.DifferentiableMCMCModel):
+    """Toy 'banana-shaped' 2D target with differentiable potential for MCMC algorithms."""
+
     def __init__(self) -> None:
+        """Initialize reference point and identity preconditioner."""
         self._reference_point = np.array([0.0, 0.0])
         self._preconditioner_sqrt_matrix = np.identity(2)
 
@@ -36,6 +40,8 @@ class BananaModel(model.DifferentiableMCMCModel):
 
 
 class GaussModel(model.DifferentiableMCMCModel):
+    r"""2D Gaussian target with given mean and covariance, exposing $\Phi(x)$ and $\nabla\Phi(x)$"""
+
     def __init__(self, mean, cov) -> None:
         self._reference_point = np.array([0.0, 0.0])
         self._preconditioner_sqrt_matrix = np.identity(2)
@@ -43,7 +49,7 @@ class GaussModel(model.DifferentiableMCMCModel):
         cov = np.array(cov)
         self._mean = mean
         self._cov = cov
-        assert  np.array_equal(cov, cov.T), "Covariance Matrix not symmetric or not square"
+        assert np.array_equal(cov, cov.T), "Covariance Matrix not symmetric or not square"
         try:
             np.linalg.cholesky(cov)
         except np.linalg.LinAlgError as err:
@@ -52,7 +58,10 @@ class GaussModel(model.DifferentiableMCMCModel):
         self._prec = np.linalg.inv(cov)
 
     def evaluate_potential(self, state: np.ndarray) -> float:
-        potential = 1/2 * np.dot(state - self._mean, self._prec @ (state - self._mean)) - 1/2 * state @ state
+        potential = (
+            1 / 2 * np.dot(state - self._mean, self._prec @ (state - self._mean))
+            - 1 / 2 * state @ state
+        )
         return potential
 
     def evaluate_gradient_of_potential(self, state: np.ndarray) -> np.ndarray:
@@ -67,12 +76,17 @@ class GaussModel(model.DifferentiableMCMCModel):
         return self._reference_point
 
 
-def test_banana_model_pCN():
+def test_banana_model_pCN() -> None:
+    """Integration test: pCN sampling on BananaModel and output collection."""
     # Set up outputs
     acceptance_rate_output = output.Acceptance()
     c0_output = output.SimplifiedOutput(output.ComponentQoI(0), output.IdentityStatistic())
-    running_mean_c0_output = output.SimplifiedOutput(output.ComponentQoI(0), output.RunningMeanStatistic())
-    batch_mean_c0_output = output.SimplifiedOutput(output.ComponentQoI(0), output.BatchMeanStatistic(1000))
+    running_mean_c0_output = output.SimplifiedOutput(
+        output.ComponentQoI(0), output.RunningMeanStatistic()
+    )
+    batch_mean_c0_output = output.SimplifiedOutput(
+        output.ComponentQoI(0), output.BatchMeanStatistic(1000)
+    )
     outputs = (acceptance_rate_output, c0_output, running_mean_c0_output, batch_mean_c0_output)
 
     # Logger and sampler settings
@@ -100,20 +114,26 @@ def test_banana_model_pCN():
     # Basic checks
     assert hasattr(samples, "values")
     assert isinstance(samples.values, np.ndarray)
-    assert samples.values.shape[1] == sampler_settings.num_samples, "Not enough samples were generated"
+    assert samples.values.shape[1] == sampler_settings.num_samples, (
+        "Not enough samples were generated"
+    )
     assert samples.values.shape[0] == 2, "Samples have the wrong shape"
 
     # Check that outputs were computed
     assert len(outputs_result) == 4
 
 
-
-def test_banana_model_MALA():
+def test_banana_model_MALA() -> None:
+    """Integration test: MALA sampling on BananaModel and output collection."""
     # Set up outputs
     acceptance_rate_output = output.Acceptance()
     c0_output = output.SimplifiedOutput(output.ComponentQoI(0), output.IdentityStatistic())
-    running_mean_c0_output = output.SimplifiedOutput(output.ComponentQoI(0), output.RunningMeanStatistic())
-    batch_mean_c0_output = output.SimplifiedOutput(output.ComponentQoI(0), output.BatchMeanStatistic(1000))
+    running_mean_c0_output = output.SimplifiedOutput(
+        output.ComponentQoI(0), output.RunningMeanStatistic()
+    )
+    batch_mean_c0_output = output.SimplifiedOutput(
+        output.ComponentQoI(0), output.BatchMeanStatistic(1000)
+    )
     outputs = (acceptance_rate_output, c0_output, running_mean_c0_output, batch_mean_c0_output)
 
     # Logger and sampler settings
@@ -141,22 +161,26 @@ def test_banana_model_MALA():
     # Basic checks
     assert hasattr(samples, "values")
     assert isinstance(samples.values, np.ndarray)
-    assert samples.values.shape[1] == sampler_settings.num_samples, "Not enough samples were generated"
+    assert samples.values.shape[1] == sampler_settings.num_samples, (
+        "Not enough samples were generated"
+    )
     assert samples.values.shape[0] == 2, "Samples have the wrong shape"
 
     # Check that outputs were computed
     assert len(outputs_result) == 4
 
 
-
-
-
-def test_gauss_model_pCN():
+def test_gauss_model_pCN() -> None:
+    """Integration test: pCN on GaussModel; verifies sample mean and covariance."""
     # Set up outputs
     acceptance_rate_output = output.Acceptance()
     c0_output = output.SimplifiedOutput(output.ComponentQoI(0), output.IdentityStatistic())
-    running_mean_c0_output = output.SimplifiedOutput(output.ComponentQoI(0), output.RunningMeanStatistic())
-    batch_mean_c0_output = output.SimplifiedOutput(output.ComponentQoI(0), output.BatchMeanStatistic(1000))
+    running_mean_c0_output = output.SimplifiedOutput(
+        output.ComponentQoI(0), output.RunningMeanStatistic()
+    )
+    batch_mean_c0_output = output.SimplifiedOutput(
+        output.ComponentQoI(0), output.BatchMeanStatistic(1000)
+    )
     outputs = (acceptance_rate_output, c0_output, running_mean_c0_output, batch_mean_c0_output)
 
     # Logger and sampler settings
@@ -174,36 +198,46 @@ def test_gauss_model_pCN():
 
     # Set up sampler
     mean = np.array([1, 2])
-    cov = np.array([[1,0],[0,1]])
+    cov = np.array([[1, 0], [0, 1]])
     sample_storage = storage.NumpyStorage()
     posterior_model = GaussModel(mean=mean, cov=cov)
     logger = logging.MCMCLogger(logger_settings)
     algorithm = algorithms.pCNAlgorithm(posterior_model, step_width=0.1)
-    sampler = sampling.Sampler(algorithm, sample_storage, outputs, logger)
+    sampler = sampling.Sampler(algorithm, sample_storage, outputs, logger, seed=0)
 
     samples, outputs_result = sampler.run(sampler_settings)
-
 
     # Basic checks
     assert hasattr(samples, "values")
     assert isinstance(samples.values, np.ndarray)
-    assert samples.values.shape[1] == sampler_settings.num_samples, "Not enough samples were generated"
+    assert samples.values.shape[1] == sampler_settings.num_samples, (
+        "Not enough samples were generated"
+    )
     assert samples.values.shape[0] == 2, "Samples have the wrong shape"
 
     # Check that outputs were computed
     assert len(outputs_result) == 4
 
     # True sampling check
-    assert np.linalg.norm(np.mean(samples.values, axis=1) - mean) < 0.2, "mean too far from true mean, maybe stochastic error"
-    assert np.linalg.norm(np.cov(samples.values) - cov) < 0.3, "cov too far from true cov, maybe stochastic error"
+    assert np.linalg.norm(np.mean(samples.values, axis=1) - mean) < 0.2, (
+        "mean too far from true mean, maybe stochastic error"
+    )
+    assert np.linalg.norm(np.cov(samples.values) - cov) < 0.3, (
+        "cov too far from true cov, maybe stochastic error"
+    )
 
 
-def test_gauss_model_MALA():
+def test_gauss_model_MALA() -> None:
+    """Integration test: MALA on GaussModel; verifies sample mean and covariance."""
     # Set up outputs
     acceptance_rate_output = output.Acceptance()
     c0_output = output.SimplifiedOutput(output.ComponentQoI(0), output.IdentityStatistic())
-    running_mean_c0_output = output.SimplifiedOutput(output.ComponentQoI(0), output.RunningMeanStatistic())
-    batch_mean_c0_output = output.SimplifiedOutput(output.ComponentQoI(0), output.BatchMeanStatistic(1000))
+    running_mean_c0_output = output.SimplifiedOutput(
+        output.ComponentQoI(0), output.RunningMeanStatistic()
+    )
+    batch_mean_c0_output = output.SimplifiedOutput(
+        output.ComponentQoI(0), output.BatchMeanStatistic(1000)
+    )
     outputs = (acceptance_rate_output, c0_output, running_mean_c0_output, batch_mean_c0_output)
 
     # Logger and sampler settings
@@ -221,25 +255,30 @@ def test_gauss_model_MALA():
 
     # Set up sampler
     mean = np.array([1, 2])
-    cov = np.array([[1,0],[0,1]])
+    cov = np.array([[1, 0], [0, 1]])
     sample_storage = storage.NumpyStorage()
     posterior_model = GaussModel(mean=mean, cov=cov)
     logger = logging.MCMCLogger(logger_settings)
     algorithm = algorithms.MALAAlgorithm(posterior_model, step_width=0.1)
-    sampler = sampling.Sampler(algorithm, sample_storage, outputs, logger, seed=np.random.seed())
+    sampler = sampling.Sampler(algorithm, sample_storage, outputs, logger, seed=0)
 
     samples, outputs_result = sampler.run(sampler_settings)
-
 
     # Basic checks
     assert hasattr(samples, "values")
     assert isinstance(samples.values, np.ndarray)
-    assert samples.values.shape[1] == sampler_settings.num_samples, "Not enough samples were generated"
+    assert samples.values.shape[1] == sampler_settings.num_samples, (
+        "Not enough samples were generated"
+    )
     assert samples.values.shape[0] == 2, "Samples have the wrong shape"
 
     # Check that outputs were computed
     assert len(outputs_result) == 4
 
     # true sampling check
-    assert np.linalg.norm(np.mean(samples.values, axis=1) - mean) < 0.2, "mean too far from true mean, maybe stochastic error"
-    assert np.linalg.norm(np.cov(samples.values) - cov) < 0.3, "cov too far from true cov, maybe stochastic error"
+    assert np.linalg.norm(np.mean(samples.values, axis=1) - mean) < 0.2, (
+        "mean too far from true mean, maybe stochastic error"
+    )
+    assert np.linalg.norm(np.cov(samples.values) - cov) < 0.3, (
+        "cov too far from true cov, maybe stochastic error"
+    )

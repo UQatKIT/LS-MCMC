@@ -114,10 +114,10 @@ def test_banana_model_pCN() -> None:
     # Basic checks
     assert hasattr(samples, "values")
     assert isinstance(samples.values, np.ndarray)
-    assert samples.values.shape[1] == sampler_settings.num_samples, (
+    assert samples.values.shape[0] == sampler_settings.num_samples, (
         "Not enough samples were generated"
     )
-    assert samples.values.shape[0] == 2, "Samples have the wrong shape"
+    assert samples.values.shape[1] == 2, "Samples have the wrong shape"
 
     # Check that outputs were computed
     assert len(outputs_result) == 4
@@ -161,10 +161,10 @@ def test_banana_model_MALA() -> None:
     # Basic checks
     assert hasattr(samples, "values")
     assert isinstance(samples.values, np.ndarray)
-    assert samples.values.shape[1] == sampler_settings.num_samples, (
+    assert samples.values.shape[0] == sampler_settings.num_samples, (
         "Not enough samples were generated"
     )
-    assert samples.values.shape[0] == 2, "Samples have the wrong shape"
+    assert samples.values.shape[1] == 2, "Samples have the wrong shape"
 
     # Check that outputs were computed
     assert len(outputs_result) == 4
@@ -210,19 +210,19 @@ def test_gauss_model_pCN() -> None:
     # Basic checks
     assert hasattr(samples, "values")
     assert isinstance(samples.values, np.ndarray)
-    assert samples.values.shape[1] == sampler_settings.num_samples, (
+    assert samples.values.shape[0] == sampler_settings.num_samples, (
         "Not enough samples were generated"
     )
-    assert samples.values.shape[0] == 2, "Samples have the wrong shape"
+    assert samples.values.shape[1] == 2, "Samples have the wrong shape"
 
     # Check that outputs were computed
     assert len(outputs_result) == 4
 
     # True sampling check
-    assert np.linalg.norm(np.mean(samples.values, axis=1) - mean) < 0.2, (
+    assert np.linalg.norm(np.mean(samples.values, axis=0) - mean) < 0.2, (
         "mean too far from true mean, maybe stochastic error"
     )
-    assert np.linalg.norm(np.cov(samples.values) - cov) < 0.3, (
+    assert np.linalg.norm(np.cov(samples.values, rowvar=False) - cov) < 0.3, (
         "cov too far from true cov, maybe stochastic error"
     )
 
@@ -267,18 +267,18 @@ def test_gauss_model_MALA() -> None:
     # Basic checks
     assert hasattr(samples, "values")
     assert isinstance(samples.values, np.ndarray)
-    assert samples.values.shape[1] == sampler_settings.num_samples, (
+    assert samples.values.shape[0] == sampler_settings.num_samples, (
         "Not enough samples were generated"
     )
-    assert samples.values.shape[0] == 2, "Samples have the wrong shape"
+    assert samples.values.shape[1] == 2, "Samples have the wrong shape"
 
     # Check that outputs were computed
     assert len(outputs_result) == 4
 
     # true sampling check
-    assert np.linalg.norm(np.mean(samples.values, axis=1) - mean) < 0.2, (
+    assert np.linalg.norm(np.mean(samples.values, axis=0) - mean) < 0.2, (
         "mean too far from true mean, maybe stochastic error"
     )
-    assert np.linalg.norm(np.cov(samples.values) - cov) < 0.3, (
+    assert np.linalg.norm(np.cov(samples.values, rowvar=False) - cov) < 0.3, (
         "cov too far from true cov, maybe stochastic error"
     )

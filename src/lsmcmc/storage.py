@@ -33,7 +33,7 @@ class NumpyStorage(MCMCStorage):
     # ----------------------------------------------------------------------------------------------
     @property
     def values(self) -> np.ndarray[tuple[int, int], np.dtype[np.floating]]:
-        stacked_samples = np.stack(self._samples, axis=-1)
+        stacked_samples = np.stack(self._samples, axis=0)
         return stacked_samples
 
 
@@ -53,7 +53,7 @@ class ZarrStorage(MCMCStorage):
     # ----------------------------------------------------------------------------------------------
     def store(self, sample: np.ndarray[tuple[int], np.dtype[np.floating]]) -> None:
         self._samples.append(sample)
-        if len(self._result_list) >= self._chunk_size:
+        if len(self._samples) >= self._chunk_size:
             self._save_to_disk()
             self._samples.clear()
 
@@ -66,11 +66,13 @@ class ZarrStorage(MCMCStorage):
 
     # ----------------------------------------------------------------------------------------------
     def _save_to_disk(self) -> None:
-        samples_to_store = np.stack(self._samples, axis=-1)
+        if len(self._samples) == 0:
+            return
+        samples_to_store = np.stack(self._samples, axis=0)
         if self._storage is None:
             self._storage = self._storage_group.create_dataset(
                 "values", shape=samples_to_store.shape, dtype=np.float64
             )
             self._storage[:] = samples_to_store
         else:
-            self._storage.append(samples_to_store, axis=-1)
+            self._storage.append(samples_to_store, axis=0)

@@ -70,7 +70,7 @@ class ZarrStorage(MCMCStorage):
             return
         samples_to_store = np.stack(self._samples, axis=0)
         if self._storage is None:
-            self._storage = self._storage_group.create_dataset(
+            self._storage = self._storage_group.create_array(
                 "values", shape=samples_to_store.shape, dtype=np.float64
             )
             self._storage[:] = samples_to_store

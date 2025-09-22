@@ -21,7 +21,7 @@ class MCMCAlgorithm(ABC):
     Subclasses must implement proposal generation and the acceptance probability.
     This class handles the generic propose/accept-reject step and caching handoff.
     """
-    # ----------------------------------------------------------------------------------------------
+
     def __init__(self, model: model.MCMCModel, step_width: float) -> None:
         if step_width <= 0:
             raise ValueError("Step width must be greater than zero.")
@@ -30,7 +30,6 @@ class MCMCAlgorithm(ABC):
         self._cached_args_current: CachedArgs | None = None  # derived class should set this
         self._cached_args_proposal: CachedArgs | None = None  # derived class should set this
 
-    # ----------------------------------------------------------------------------------------------
     def compute_step(
         self, current_state: np.ndarray[tuple[int], np.dtype[np.floating]], rng: np.random.Generator
     ) -> tuple[np.ndarray[tuple[int], np.dtype[np.floating]], bool]:
@@ -58,7 +57,6 @@ class MCMCAlgorithm(ABC):
         self._cached_args_proposal.clear()
         return new_state, accepted
 
-    # ----------------------------------------------------------------------------------------------
     def _perform_accept_reject(
         self,
         current_state: np.ndarray[tuple[int], np.dtype[np.floating]],
@@ -89,7 +87,6 @@ class MCMCAlgorithm(ABC):
             accepted = False
         return new_state, accepted
 
-    # ----------------------------------------------------------------------------------------------
     @abstractmethod
     def _create_proposal(
         self, state: np.ndarray[tuple[int], np.dtype[np.floating]], rng: np.random.Generator
@@ -105,7 +102,6 @@ class MCMCAlgorithm(ABC):
         """
         raise NotImplementedError
 
-    # ----------------------------------------------------------------------------------------------
     @abstractmethod
     def _evaluate_acceptance_probability(
         self,
@@ -160,13 +156,12 @@ class pCNAlgorithm(MCMCAlgorithm):
         Cotter, Roberts, Stuart, White (2013). *MCMC Methods for Functions: Modifying Old
         Algorithms to Make Them Faster.* Statistical Science 28(3).
     """
-    # ----------------------------------------------------------------------------------------------
+
     def __init__(self, model: model.MCMCModel, step_width: float) -> None:
         super().__init__(model, step_width)
         self._cached_args_current: pCNCachedArgs = pCNCachedArgs()
         self._cached_args_proposal: pCNCachedArgs = pCNCachedArgs()
 
-    # ----------------------------------------------------------------------------------------------
     def _cache_args(
         self, potential_current: float | None = None, potential_proposal: float | None = None
     ) -> None:
@@ -181,7 +176,6 @@ class pCNAlgorithm(MCMCAlgorithm):
         if potential_proposal:
             self._cached_args_proposal.potential = potential_proposal
 
-    # ----------------------------------------------------------------------------------------------
     def _create_proposal(
         self, state: np.ndarray[tuple[int], np.dtype[np.floating]], rng: np.random.Generator
     ) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
@@ -199,17 +193,12 @@ class pCNAlgorithm(MCMCAlgorithm):
         """
         random_increment = rng.normal(size=state.shape)
         random_increment = self._model.compute_preconditioner_sqrt_action(random_increment)
-        proposal = (
-            self._model.reference_point
-            + 1/(2+self._step_width) *
-            (
-                (2-self._step_width) * (state - self._model.reference_point)
-                + np.sqrt(8*self._step_width) * random_increment
-            )
+        proposal = self._model.reference_point + 1 / (2 + self._step_width) * (
+            (2 - self._step_width) * (state - self._model.reference_point)
+            + np.sqrt(8 * self._step_width) * random_increment
         )
         return proposal
 
-    # ----------------------------------------------------------------------------------------------
     def _evaluate_acceptance_probability(
         self,
         current_state: np.ndarray[tuple[int], np.dtype[np.floating]],
@@ -253,6 +242,7 @@ class MALACachedArgs(CachedArgs):
         sqrt_action_gradient (np.ndarray | None): Action of preconditioner square root on gradient.
         action_gradient (np.ndarray | None): Action of full preconditioner on gradient.
     """
+
     potential: float | None = None
     gradient: np.ndarray[tuple[int], np.dtype[np.floating]] | None = None
     sqrt_action_gradient: np.ndarray[tuple[int], np.dtype[np.floating]] | None = None
@@ -274,13 +264,6 @@ class MALAAlgorithm(MCMCAlgorithm):
     w \sim \mathcal N(0, C).
     $$
 
-    Args:
-        model (DifferentiableMCMCModel): Provides potential $\Phi$, its gradient,
-            and preconditioner actions (embodying $C$).
-        step_width (float): Step size $\delta > 0$. Smaller values increase
-            acceptance; larger values explore faster until stability or
-            acceptance deteriorates.
-
     Notes:
         The preconditioner implicitly encodes the covariance operator $C$ of
         the reference Gaussian prior.
@@ -289,8 +272,17 @@ class MALAAlgorithm(MCMCAlgorithm):
         Cotter, Roberts, Stuart, White (2013). "MCMC Methods for Functions:
         Modifying Old Algorithms to Make Them Faster." Statistical Science 28(3).
     """
-    # ----------------------------------------------------------------------------------------------
+
     def __init__(self, model: model.DifferentiableMCMCModel, step_width: float) -> None:
+        r"""Initialize MALA Sampling.
+
+        Args:
+            model (DifferentiableMCMCModel): Provides potential $\Phi$, its gradient,
+                and preconditioner actions (embodying $C$).
+            step_width (float): Step size $\delta > 0$. Smaller values increase
+                acceptance; larger values explore faster until stability or
+                acceptance deteriorates.
+        """
         super().__init__(model, step_width)
         self._model = model
         self._cached_args_current: MALACachedArgs = MALACachedArgs()
@@ -314,7 +306,6 @@ class MALAAlgorithm(MCMCAlgorithm):
                 cache.gradient
             )
 
-    # ----------------------------------------------------------------------------------------------
     def _create_proposal(
         self, state: np.ndarray[tuple[int], np.dtype[np.floating]], rng: np.random.Generator
     ) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
@@ -342,7 +333,6 @@ class MALAAlgorithm(MCMCAlgorithm):
         ) / (2 + self._step_width)
         return proposal
 
-    # ----------------------------------------------------------------------------------------------
     def _evaluate_acceptance_probability(
         self,
         current_state: np.ndarray[tuple[int], np.dtype[np.floating]],
@@ -391,6 +381,6 @@ class MALAAlgorithm(MCMCAlgorithm):
             )
         )
 
-        acceptance_probability = np.min((1, np.exp(p_u_v-p_v_u)))
+        acceptance_probability = np.min((1, np.exp(p_u_v - p_v_u)))
 
         return acceptance_probability

@@ -1,3 +1,4 @@
+"""Main Sampler that handles the algorithm, output and storage of samples."""
 import time
 from collections.abc import Iterable
 from dataclasses import dataclass

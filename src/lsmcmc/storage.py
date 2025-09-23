@@ -1,3 +1,7 @@
+"""Custom storage interface for MCMC sampling.
+
+The custom interface is built in a way to enable storage of samples directly to the disk.
+"""
 import pathlib
 from abc import ABC, abstractmethod
 from collections.abc import Iterable

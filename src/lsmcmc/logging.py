@@ -1,3 +1,4 @@
+"""Simple logger for tracking MCMC sampling."""
 import logging
 import sys
 from dataclasses import dataclass

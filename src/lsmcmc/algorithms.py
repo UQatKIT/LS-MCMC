@@ -1,6 +1,7 @@
+"""Implementation of core MCMC algorithms."""
+import dataclasses
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-import dataclasses
 
 import numpy as np
 
@@ -113,8 +114,6 @@ class MCMCAlgorithm(ABC):
 
 
 # ==================================================================================================
-
-
 @dataclass
 class pCNCachedArgs(CachedArgs):
     potential: float | None = None

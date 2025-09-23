@@ -1,22 +1,43 @@
+"""MCMC Output Tracking.
+
+Outputs generally consist of two components: a Quantity of Interest (QoI), which is computed solely
+from the samples, and a statistic, which is derived from the QoI.
+
+For example, to track the acceptance rate, the QoI could be "Was the sample accepted?".
+A corresponding statistic might be the average acceptance over the last 100 samples,
+or the overall average across all samples.
+
+This module implements some basic QoIs and statistics.
+"""
+
 from abc import ABC, abstractmethod
 from numbers import Number
-from collections.abc import Iterable
-from typing import Optional, ClassVar
 
 import numpy as np
 
 
 # ==================================================================================================
 class MCMCQoI(ABC):
+    """Abstract base class for Quantities of Interest (QoI) in MCMC sampling."""
+
     @abstractmethod
     def evaluate(
         self, state: np.ndarray[tuple[int], np.dtype[np.floating]], accepted: bool
     ) -> Number:
-        """Evaluates QoI from state vector."""
+        """Evaluates QoI from state vector.
+
+        Args:
+            state: Current state vector from MCMC chain.
+            accepted: Whether the current proposal was accepted.
+
+        Returns:
+            Evaluated quantity of interest value.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def name(self) -> str:
+        """Returns the name of the quantity of interest."""
         raise NotImplementedError
 
     def __str__(self) -> str:
@@ -25,7 +46,14 @@ class MCMCQoI(ABC):
 
 # --------------------------------------------------------------------------------------------------
 class ComponentQoI(MCMCQoI):
+    """QoI that extracts a specific component from the state vector."""
+
     def __init__(self, component: int) -> None:
+        """Initialize ComponentQoI.
+
+        Args:
+            component: Index of the component to extract from state vector.
+        """
         self._component = component
 
     def evaluate(
@@ -39,6 +67,8 @@ class ComponentQoI(MCMCQoI):
 
 # --------------------------------------------------------------------------------------------------
 class MeanQoI(MCMCQoI):
+    """QoI that computes the mean of all components in the state vector."""
+
     @staticmethod
     def evaluate(state: np.ndarray[tuple[int], np.dtype[np.floating]], _: bool) -> float:
         return np.mean(state)
@@ -50,6 +80,8 @@ class MeanQoI(MCMCQoI):
 
 # --------------------------------------------------------------------------------------------------
 class AcceptanceQoI(MCMCQoI):
+    """QoI that tracks proposal acceptance status."""
+
     @staticmethod
     def evaluate(_: np.ndarray[tuple[int], np.dtype[np.floating]], accepted: bool) -> float:
         return float(accepted)
@@ -61,13 +93,23 @@ class AcceptanceQoI(MCMCQoI):
 
 # ==================================================================================================
 class MCMCStatistic(ABC):
+    """Abstract base class for statistics computed from QoI values."""
+
     @abstractmethod
     def evaluate(self, qoi_value: Number) -> Number:
-        """Evaluates a certain statistic from a Quantity of Interest."""
+        """Evaluates a certain statistic from a Quantity of Interest.
+
+        Args:
+            qoi_value: Value from a quantity of interest evaluation.
+
+        Returns:
+            Computed statistic value.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def name(self) -> str:
+        """Returns the name of the statistic."""
         raise NotImplementedError
 
     def __str__(self) -> str:
@@ -76,6 +118,8 @@ class MCMCStatistic(ABC):
 
 # --------------------------------------------------------------------------------------------------
 class IdentityStatistic(MCMCStatistic):
+    """Statistic that returns the input value unchanged."""
+
     @staticmethod
     def evaluate(qoi_value: Number) -> Number:
         return qoi_value
@@ -87,6 +131,8 @@ class IdentityStatistic(MCMCStatistic):
 
 # --------------------------------------------------------------------------------------------------
 class RunningMeanStatistic(MCMCStatistic):
+    """Statistic that computes a running mean of QoI values."""
+
     def __init__(self) -> None:
         self._running_value = 0
         self._num_samples = 0
@@ -105,7 +151,17 @@ class RunningMeanStatistic(MCMCStatistic):
 
 # --------------------------------------------------------------------------------------------------
 class BatchMeanStatistic(MCMCStatistic):
+    """Statistic that computes the mean of QoI values in batches."""
+
     def __init__(self, batch_size: int) -> None:
+        """Initialize BatchMeanStatistic.
+
+        Args:
+            batch_size: Number of samples per batch.
+
+        Raises:
+            ValueError: If batch_size is less than or equal to zero.
+        """
         if batch_size <= 0:
             raise ValueError("Batch size must be greater than zero.")
         self._running_value = 0
@@ -127,6 +183,8 @@ class BatchMeanStatistic(MCMCStatistic):
 
 # ==================================================================================================
 class MCMCOutput:
+    """Combines a QoI and statistic for MCMC output tracking and logging."""
+
     def __init__(
         self,
         qoi: MCMCQoI,
@@ -135,6 +193,18 @@ class MCMCOutput:
         str_format: str | None = None,
         log: bool = False,
     ) -> None:
+        """Initialize MCMCOutput.
+
+        Args:
+            qoi: Quantity of interest to evaluate.
+            statistic: Statistic to compute from QoI values.
+            str_id: String identifier for logging. Required if log=True.
+            str_format: Format string for logging. Required if log=True.
+            log: Whether to include this output in logging.
+
+        Raises:
+            ValueError: If log=True but str_id or str_format is None.
+        """
         if log and str_id is None:
             raise ValueError("String ID must be provided if output is to be logged.")
         if log and str_format is None:
@@ -147,21 +217,29 @@ class MCMCOutput:
         self._values = []
 
     def update(self, state: np.ndarray[tuple[int], np.dtype[np.floating]], accepted: bool) -> None:
+        """Update output with new MCMC state.
+
+        Args:
+            state: Current state vector from MCMC chain.
+            accepted: Whether the current proposal was accepted.
+        """
         scalar_output = self._qoi.evaluate(state, accepted)
         scalar_output = self._statistic.evaluate(scalar_output)
         self._values.append(scalar_output)
 
     @property
     def value(self) -> Number:
+        """Returns the most recent output value."""
         return self._values[-1]
 
     @property
     def all_values(self) -> np.ndarray[tuple[int], np.dtype[np.floating]]:
+        """Returns all computed output values as numpy array."""
         return np.array(self._values)
 
 
 class Acceptance(MCMCOutput):
-    """Output of average acceptance rate."""
+    """Pre-configured output for tracking average acceptance rate."""
 
     def __init__(self) -> None:
         super().__init__(
@@ -174,11 +252,19 @@ class Acceptance(MCMCOutput):
 
 
 class SimplifiedOutput(MCMCOutput):
+    """Simplified output constructor with automatic string formatting."""
+
     def __init__(
         self,
         qoi: MCMCQoI,
         statistic: MCMCStatistic,
     ) -> None:
+        """Initialize SimplifiedOutput with automatic formatting.
+
+        Args:
+            qoi: Quantity of interest to evaluate.
+            statistic: Statistic to compute from QoI values.
+        """
         str_id = f"{statistic} of {qoi}"
         if isinstance(statistic, IdentityStatistic):
             str_id = f"{qoi}"

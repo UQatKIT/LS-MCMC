@@ -1,0 +1,70 @@
+name: Release
+run-name: Create Github release from tagged commit
+
+# -- Trigger Events --------------------------------------------------------------------------------
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - v*
+
+# -- Concurrency -----------------------------------------------------------------------------------
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+# -- Jobs ------------------------------------------------------------------------------------------
+jobs:
+  # Create Github release with changelog
+  release:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        id: checkout-code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install uv
+        id: setup-uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        id: install-deps
+        run: uv sync --only-group docs
+      - name: Create changelog
+        id: create-changelog
+        run: uv run git-cliff --latest --strip all --output ${{ github.workspace }}/changelog.md
+      - name: Create release
+        id: create-release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: ${{ github.workspace }}/changelog.md
+
+  # Publish to Test-PyPI and PyPI
+  publish-pypi:
+    runs-on: ubuntu-latest
+    environment: publish
+    permissions:
+      id-token: write
+    steps:
+      - name: Checkout code
+        id: checkout-code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install uv
+        id: setup-uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Publish to Test-PyPI
+        id: publish-testpypi
+        run: |
+          uv build
+          uv publish --publish-url https://test.pypi.org/legacy/ --trusted-publishing always
+      - name: Publish to PyPI
+        id: publish-pypi
+        run: uv publish --publish-url https://upload.pypi.org/legacy/ --trusted-publishing always

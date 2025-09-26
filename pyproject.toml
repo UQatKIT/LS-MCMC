@@ -7,7 +7,7 @@ name = "lsmcmc"
 description = "A light-weight library for large-scale Markov Chain Monte Carlo sampling"
 license = { text = "MIT" }
 readme = "README.md"
-dynamic = ["version"]
+version = "0.0.1"
 requires-python = ">=3.12"
 keywords = [
     "markov chain monte carlo",
@@ -24,7 +24,7 @@ classifiers = [
 urls = { repository = "https://github.com/UQatKIT/ls-mcmc" }
 
 # --------------------------------------------------------------------------------------------------
-dependencies = ["numpy>=2.1.2", "zarr>=2.18.3"]
+dependencies = ["numpy>=2.1.2", "zarr>=3.0.1"]
 
 [dependency-groups]
 dev = [
@@ -86,3 +86,7 @@ markers = [
     "integration: integration tests",
     "slow: tests with long runtime",
 ]
+
+[build-system]
+requires = ["uv_build>=0.8.22,<0.9.0"]
+build-backend = "uv_build"

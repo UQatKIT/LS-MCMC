@@ -1,0 +1,3 @@
+# Sampling
+
+::: lsmcmc.sampling

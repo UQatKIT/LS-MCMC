@@ -1,0 +1,3 @@
+# Algorithms
+
+::: lsmcmc.algorithms

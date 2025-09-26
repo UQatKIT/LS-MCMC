@@ -1,31 +1,78 @@
+"""Main Sampler that handles the algorithm, output and storage of samples."""
+
+import pickle
+import signal
 import time
 from collections.abc import Iterable
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 
 from . import algorithms, logging, output, storage
 
+CHECKPOINT_PATH = "./sampler_checkpoint.pickle"
+
 
 # ==================================================================================================
 @dataclass
 class SamplerRunSettings:
+    """Settings for running the MCMC sampler.
+
+    Attributes:
+        num_samples (int): Number of samples to generate.
+        initial_state (np.ndarray): Initial state for the sampler.
+        print_interval (int): Interval at which outputs should be printed or saved to a file.
+        store_interval (int): Interval at which sample values should be stored.
+    """
+
     num_samples: int
-    initial_state: np.ndarray
-    print_interval: int
-    store_interval: int
+    initial_state: np.ndarray[tuple[int], np.dtype[np.floating]]
+    print_interval: int = 1
+    store_interval: int = 1
+    checkpoint_path: Path = Path("sampler_checkpoint.pickle")
+
+
+@dataclass
+class SamplerCheckpoint:
+    """Checkpoint data for resuming MCMC sampling.
+
+    Attributes:
+        iteration: Current iteration number.
+        current_state: Current state of the Markov chain.
+        rng_state: State of the random number generator.
+        run_settings: Original run settings.
+        outputs_state: Serialized state of output objects.
+    """
+
+    iteration: int
+    current_state: np.ndarray[tuple[int], np.dtype[np.floating]]
+    rng_state: dict
+    run_settings: SamplerRunSettings
+    outputs_state: Iterable[output.MCMCOutput]
 
 
 # ==================================================================================================
 class Sampler:
-    # ----------------------------------------------------------------------------------------------
+    """MCMC sampler that runs a given algorithm and manages outputs, logging, and storage."""
+
     def __init__(
         self,
         algorithm: algorithms.MCMCAlgorithm,
-        sample_storage: storage.MCMCStorage | None = None,
+        sample_storage: storage.MCMCStorage = None,
         outputs: Iterable[output.MCMCOutput] | None = None,
         logger: logging.MCMCLogger | None = None,
+        seed: int = 0,
     ) -> None:
+        """Initializes the Sampler.
+
+        Args:
+            algorithm (algorithms.MCMCAlgorithm): The MCMC algorithm to use.
+            sample_storage (storage.MCMCStorage, optional): Storage for samples (e.g. disk).
+            outputs (Iterable[output.MCMCOutput], optional): Outputs to compute during sampling for logging.
+            logger (logging.MCMCLogger, optional): Logger for progress and diagnostics.
+            seed (int, optional): Random seed for reproducibility.
+        """
         self._algorithm = algorithm
         self._samples = sample_storage
         self._outputs = outputs if outputs is not None else []
@@ -33,11 +80,49 @@ class Sampler:
         self._print_interval = None
         self._store_interval = None
         self._start_time = None
+        self._terminate = False
+        self._rng = np.random.default_rng(seed=seed)
 
-    # ----------------------------------------------------------------------------------------------
+    @classmethod
+    def resume_from_checkpoint(
+        cls,
+        algorithm: algorithms.MCMCAlgorithm,
+        sample_storage: storage.MCMCStorage,
+        logger: logging.MCMCLogger,
+        checkpoint_path: Path | None = None,
+    ) -> "Sampler":
+        if not checkpoint_path:
+            checkpoint_path = Path(CHECKPOINT_PATH)
+        if not checkpoint_path.exists():
+            raise FileNotFoundError(f"Could not find checkpoint: {checkpoint_path}")
+        with Path.open(checkpoint_path, "rb") as f:
+            checkpoint: SamplerCheckpoint = pickle.load(f)
+
+        sampler = cls(
+            algorithm=algorithm,
+            sample_storage=sample_storage,
+            outputs=checkpoint.outputs_state,
+            logger=logger,
+        )
+
+        sampler._rng.bit_generator.state = checkpoint.rng_state
+        checkpoint.run_settings.initial_state = checkpoint.current_state
+        return sampler.run(run_settings=checkpoint.run_settings, iteration=checkpoint.iteration)
+
     def run(
-        self, run_settings: SamplerRunSettings
+        self, run_settings: SamplerRunSettings, iteration: int = 0
     ) -> tuple[storage.MCMCStorage, Iterable[output.MCMCOutput]]:
+        """Run the MCMC sampler for the specified settings.
+
+        Args:
+            run_settings (SamplerRunSettings): Settings for the sampler run.
+            iteration (int): The iteration number at which the sampler starts.
+                Only relevant for restarting a chain.
+
+        Returns:
+            tuple[storage.MCMCStorage, Iterable[output.MCMCOutput]]:
+                The sample storage and the outputs after sampling.
+        """
         if run_settings.num_samples <= 0:
             raise ValueError("Number of samples must be greater than zero.")
         if run_settings.print_interval <= 0:
@@ -49,16 +134,21 @@ class Sampler:
         if run_settings.store_interval > run_settings.num_samples:
             raise ValueError("Store interval must be less than the number of samples.")
 
+        self._setup_handlers()
         current_state = run_settings.initial_state
         self._num_samples = run_settings.num_samples
         self._print_interval = run_settings.print_interval
         self._store_interval = run_settings.store_interval
         self._start_time = time.time()
-        self._run_utilities(0, current_state, accepted=True)
+        if iteration == 0:
+            self._run_utilities(iteration, current_state, accepted=True)
 
         try:
-            for i in range(1, self._num_samples):
-                new_state, accepted = self._algorithm.compute_step(current_state)
+            for i in range(1 + iteration, self._num_samples):
+                if self._terminate:
+                    self._handle_termination(current_state, i - 1, run_settings)
+                    break
+                new_state, accepted = self._algorithm.compute_step(current_state, self._rng)
                 self._run_utilities(i, new_state, accepted=accepted)
                 current_state = new_state
         except BaseException as exc:
@@ -66,8 +156,59 @@ class Sampler:
         finally:
             return self._samples, self._outputs
 
-    # ----------------------------------------------------------------------------------------------
-    def _run_utilities(self, it: int, state: np.ndarray, accepted: bool) -> None:
+    def _setup_handlers(self) -> None:
+        def handler(signum, frame):
+            self._terminate = True
+
+        signal.signal(signal.SIGTERM, handler)
+        signal.signal(signal.SIGINT, handler)
+
+    def _handle_termination(
+        self,
+        state: np.ndarray[tuple[int], np.dtype[np.floating]],
+        iteration: int,
+        run_settings: SamplerRunSettings,
+    ) -> None:
+        if self._logger:
+            self._logger.info("Received stop signal, shutting down gracefully.")
+
+        # save samples
+        if self._samples:
+            try:
+                self._samples.flush()
+                if self._logger:
+                    self._logger.info("Storage flushing complete.")
+            except Exception as e:
+                if self._logger:
+                    self._logger.error(f"Failed to flush samples: {e}")
+
+        # save chain sate (i.e. rnga and some metadata)
+        try:
+            checkpoint = SamplerCheckpoint(
+                iteration=iteration,
+                current_state=state.copy(),
+                rng_state=self._rng.bit_generator.state,
+                run_settings=run_settings,
+                outputs_state=self._outputs,
+            )
+            with Path.open(run_settings.checkpoint_path, "wb") as f:
+                pickle.dump(checkpoint, f)
+            if self._logger:
+                self._logger.info(f"Checkpoint saved to {run_settings.checkpoint_path}")
+        except Exception as e:
+            if self._logger:
+                self._logger.error(f"Failed to save checkpoint: {e}")
+
+    def _run_utilities(
+        self, it: int, state: np.ndarray[tuple[int], np.dtype[np.floating]], accepted: bool
+    ) -> None:
+        """Update outputs, store samples, and log progress for the current iteration.
+
+        Args:
+            it (int): Current iteration number.
+            state (np.ndarray): Current state of the chain.
+            accepted (bool): Whether the proposed state was accepted.
+        """
         assert it >= 0, f"Iteration number must be non-negative, but has value{it}"
         store_values = (it % self._store_interval == 0) or (it == self._num_samples + 1)
         log_values = (it % self._print_interval == 0) or (it == self._num_samples + 1)

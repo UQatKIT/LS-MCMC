@@ -1,7 +1,11 @@
 [project]
-authors = [{ name = "Maximilian Kruse", email = "maximilian.kruse@kit.edu" }]
+authors = [
+    { name = "Maximilian Kruse", email = "maximilian.kruse@kit.edu" },
+    { name = "Felix Racz", email = "felix.racz@kit.edu" },
+]
 maintainers = [
     { name = "Maximilian Kruse", email = "maximilian.kruse@kit.edu" },
+    { name = "Felix Racz", email = "felix.racz@kit.edu" },
 ]
 name = "lsmcmc"
 description = "A light-weight library for large-scale Markov Chain Monte Carlo sampling"

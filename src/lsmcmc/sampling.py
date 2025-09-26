@@ -28,8 +28,8 @@ class SamplerRunSettings:
 
     num_samples: int
     initial_state: np.ndarray[tuple[int], np.dtype[np.floating]]
-    print_interval: int
-    store_interval: int
+    print_interval: int = 1
+    store_interval: int = 1
 
 
 @dataclass

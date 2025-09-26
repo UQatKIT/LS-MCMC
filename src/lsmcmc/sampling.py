@@ -163,37 +163,6 @@ class Sampler:
         signal.signal(signal.SIGTERM, handler)
         signal.signal(signal.SIGINT, handler)
 
-    def _save_checkpoint(
-        self,
-        iteration: int,
-        state: np.ndarray[tuple[int], np.dtype[np.floating]],
-        run_settings: SamplerRunSettings,
-        checkpoint_path: Path | None = None,
-    ) -> None:
-        """Save current sampler state to checkpoint file.
-
-        Args:
-            checkpoint_path: Path where to save the checkpoint.
-            iteration: Current iteration number.
-            state: Current state of the Markov chain.
-        """
-        checkpoint = SamplerCheckpoint(
-            iteration=iteration,
-            current_state=state.copy(),
-            rng_state=self._rng.bit_generator.state,
-            run_settings=run_settings,
-            outputs_state=self._outputs,
-        )
-        try:
-            # Write to temporary file first, then rename for atomic operation
-            with Path.open(run_settings.checkpoint_path, "wb") as f:
-                pickle.dump(checkpoint, f)
-        except BaseException as e:
-            self._logger.exception("Someting went wrong when trying to store ")
-        else:
-            if self._logger:
-                self._logger.info(f"Checkpoint saved to {checkpoint_path}.")
-
     def _handle_termination(
         self,
         state: np.ndarray[tuple[int], np.dtype[np.floating]],
@@ -203,6 +172,7 @@ class Sampler:
         if self._logger:
             self._logger.info("Received stop signal, shutting down gracefully.")
 
+        # save samples
         if self._samples:
             try:
                 self._samples.flush()
@@ -212,8 +182,17 @@ class Sampler:
                 if self._logger:
                     self._logger.error(f"Failed to flush samples: {e}")
 
+        # save chain sate (i.e. rnga and some metadata)
         try:
-            self._save_checkpoint(iteration=iteration, state=state, run_settings=run_settings)
+            checkpoint = SamplerCheckpoint(
+                iteration=iteration,
+                current_state=state.copy(),
+                rng_state=self._rng.bit_generator.state,
+                run_settings=run_settings,
+                outputs_state=self._outputs,
+            )
+            with Path.open(run_settings.checkpoint_path, "wb") as f:
+                pickle.dump(checkpoint, f)
             if self._logger:
                 self._logger.info(f"Checkpoint saved to {run_settings.checkpoint_path}")
         except Exception as e:

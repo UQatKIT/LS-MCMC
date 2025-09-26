@@ -104,3 +104,11 @@ class MCMCLogger:
             message: The message to log.
         """
         self._pylogger.exception(message)
+
+    def error(self, message: str) -> None:
+        """Log an error.
+
+        Args:
+            message (str): The message to log.
+        """
+        self._pylogger.error(message)

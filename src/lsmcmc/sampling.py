@@ -30,6 +30,7 @@ class SamplerRunSettings:
     initial_state: np.ndarray[tuple[int], np.dtype[np.floating]]
     print_interval: int = 1
     store_interval: int = 1
+    checkpoint_path: Path = Path("sampler_checkpoint.pickle")
 
 
 @dataclass
@@ -183,15 +184,15 @@ class Sampler:
             run_settings=run_settings,
             outputs_state=self._outputs,
         )
-
-        if not checkpoint_path:
-            checkpoint_path = Path(CHECKPOINT_PATH)
-        # Write to temporary file first, then rename for atomic operation
-        with Path.open(checkpoint_path, "wb") as f:
-            pickle.dump(checkpoint, f)
-
-        if self._logger:
-            self._logger.info(f"Checkpoint saved to {checkpoint_path}.")
+        try:
+            # Write to temporary file first, then rename for atomic operation
+            with Path.open(run_settings.checkpoint_path, "wb") as f:
+                pickle.dump(checkpoint, f)
+        except BaseException as e:
+            self._logger.exception("Someting went wrong when trying to store ")
+        else:
+            if self._logger:
+                self._logger.info(f"Checkpoint saved to {checkpoint_path}.")
 
     def _handle_termination(
         self,
@@ -199,10 +200,25 @@ class Sampler:
         iteration: int,
         run_settings: SamplerRunSettings,
     ) -> None:
-        self._logger.info("Recevied SIGTERM, shutting down gracefully.")
-        self._samples.flush()
-        self._logger.info("Storage flushing complete.")
-        self._save_checkpoint(iteration=iteration, state=state, run_settings=run_settings)
+        if self._logger:
+            self._logger.info("Received stop signal, shutting down gracefully.")
+
+        if self._samples:
+            try:
+                self._samples.flush()
+                if self._logger:
+                    self._logger.info("Storage flushing complete.")
+            except Exception as e:
+                if self._logger:
+                    self._logger.error(f"Failed to flush samples: {e}")
+
+        try:
+            self._save_checkpoint(iteration=iteration, state=state, run_settings=run_settings)
+            if self._logger:
+                self._logger.info(f"Checkpoint saved to {run_settings.checkpoint_path}")
+        except Exception as e:
+            if self._logger:
+                self._logger.error(f"Failed to save checkpoint: {e}")
 
     def _run_utilities(
         self, it: int, state: np.ndarray[tuple[int], np.dtype[np.floating]], accepted: bool

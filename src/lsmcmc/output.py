@@ -41,6 +41,7 @@ class MCMCQoI(ABC):
         raise NotImplementedError
 
     def __str__(self) -> str:
+        """Name of the QoI for logging the output."""
         return self.name()
 
 
@@ -59,9 +60,11 @@ class ComponentQoI(MCMCQoI):
     def evaluate(
         self, state: np.ndarray[tuple[int], np.dtype[np.floating]], _accepted: bool
     ) -> float:
+        """Extracts specified component from state."""
         return state[self._component]
 
     def name(self) -> str:
+        """String representation of the form "component <component number>" used for logging."""
         return f"component {self._component}"
 
 
@@ -71,10 +74,12 @@ class MeanQoI(MCMCQoI):
 
     @staticmethod
     def evaluate(state: np.ndarray[tuple[int], np.dtype[np.floating]], _: bool) -> float:
+        """Extracts mean of the state."""
         return np.mean(state)
 
     @staticmethod
     def name() -> str:
+        """String "mean" used for logging the output."""
         return "mean"
 
 
@@ -84,10 +89,12 @@ class AcceptanceQoI(MCMCQoI):
 
     @staticmethod
     def evaluate(_: np.ndarray[tuple[int], np.dtype[np.floating]], accepted: bool) -> float:
+        """Extracts whether a state was accepted or not and converts to float for calculations."""
         return float(accepted)
 
     @staticmethod
     def name() -> str:
+        """String "acceptance" used for logging the output."""
         return "acceptance"
 
 
@@ -113,6 +120,7 @@ class MCMCStatistic(ABC):
         raise NotImplementedError
 
     def __str__(self) -> str:
+        """Name of the Statistic used for logging."""
         return self.name()
 
 
@@ -122,10 +130,12 @@ class IdentityStatistic(MCMCStatistic):
 
     @staticmethod
     def evaluate(qoi_value: Number) -> Number:
+        """Returns the QoI unchanged."""
         return qoi_value
 
     @staticmethod
-    def name():
+    def name() -> str:
+        """String "identity" for logging the output."""
         return "identity"
 
 
@@ -134,10 +144,12 @@ class RunningMeanStatistic(MCMCStatistic):
     """Statistic that computes a running mean of QoI values."""
 
     def __init__(self) -> None:
+        """Initialize running mean."""
         self._running_value = 0
         self._num_samples = 0
 
     def evaluate(self, qoi_value: Number) -> float:
+        """Updates the running mean based on a new sample QoI."""
         new_value = self._num_samples / (
             self._num_samples + 1
         ) * self._running_value + qoi_value / (self._num_samples + 1)
@@ -145,7 +157,8 @@ class RunningMeanStatistic(MCMCStatistic):
         self._running_value = new_value
         return new_value
 
-    def name(self):
+    def name(self) -> str:
+        """String "mean" for logging the output."""
         return "mean"
 
 
@@ -171,13 +184,15 @@ class BatchMeanStatistic(MCMCStatistic):
         self._batch_mean = 0
 
     def evaluate(self, qoi_value: Number) -> float:
+        """Updates the batch mean based on a new sample QoI."""
         self._values.append(qoi_value)
-        if len(self._values) == self._batch_size:
+        if len(self._values) >= self._batch_size:
             self._batch_mean = np.mean(self._values)
             self._values.clear()
         return self._batch_mean
 
-    def name(self):
+    def name(self) -> str:
+        """String "BM<batch size>" for logging the output."""
         return f"BM{self._batch_size}"
 
 
@@ -242,6 +257,7 @@ class Acceptance(MCMCOutput):
     """Pre-configured output for tracking average acceptance rate."""
 
     def __init__(self) -> None:
+        """Initialize acceptance output."""
         super().__init__(
             qoi=AcceptanceQoI(),
             statistic=RunningMeanStatistic(),

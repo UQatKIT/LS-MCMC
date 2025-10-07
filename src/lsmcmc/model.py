@@ -8,7 +8,7 @@ $$
 \frac{d\mu}{d\mu_0} \propto \exp(-\Phi(u))
 $$
 
-where $\mu_0 = \mathcalN(0, C)$ is a centered Gaussian reference measure
+where $\mu_0 = \mathcal{N}(0, C)$ is a centered Gaussian reference measure
 with covariance operator $C$.
 The Likelihood is then given via the potential $\Phi(u)$.
 Models should at least implement calculating the potential $\Phi(u)$ and the action

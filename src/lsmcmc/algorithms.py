@@ -1,4 +1,5 @@
 """Implementation of core MCMC algorithms."""
+
 import dataclasses
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -10,8 +11,11 @@ from . import model
 
 # ==================================================================================================
 @dataclass
-class CachedArgs(ABC):
-    def clear(self):
+class CachedArgs:
+    """Base class for argument caches used in MCMCAlgorithm."""
+
+    def clear(self) -> None:
+        """Clear all cached arguments."""
         for field in dataclasses.fields(self):
             self.__setattr__(field.name, None)
 
@@ -24,6 +28,15 @@ class MCMCAlgorithm(ABC):
     """
 
     def __init__(self, model: model.MCMCModel, step_width: float) -> None:
+        r"""Initialize MCMC algorithm.
+
+        Args:
+            model (MCMCModel): Provides potential $\Phi$ and preconditioner actions
+                encoding the covariance operator $C$ and reference point $u_0$.
+            step_width (float): The step scaling $\delta \in (0,2)$. Smaller values
+                give higher acceptance but slower exploration; larger values explore faster until
+                acceptance deteriorates.
+        """
         if step_width <= 0:
             raise ValueError("Step width must be greater than zero.")
         self._step_width = step_width
@@ -36,9 +49,9 @@ class MCMCAlgorithm(ABC):
     ) -> tuple[np.ndarray[tuple[int], np.dtype[np.floating]], bool]:
         """Advance the Markov chain by one step.
 
-        1) Create a proposal from the current state.
-        2) Perform accept-reject according to the subclass criterion.
-        3) Swap caches on accept and clear the proposal cache.
+        1. Create a proposal from the current state.
+        2. Perform accept-reject according to the subclass criterion.
+        3. Swap caches on accept and clear the proposal cache.
 
         Args:
             current_state (np.ndarray): Current chain state.
@@ -116,6 +129,8 @@ class MCMCAlgorithm(ABC):
 # ==================================================================================================
 @dataclass
 class pCNCachedArgs(CachedArgs):
+    """Argument cache for pCN algorithm."""
+
     potential: float | None = None
 
 
@@ -129,10 +144,11 @@ class pCNAlgorithm(MCMCAlgorithm):
     Proposal (given current state $u$):
 
     $$
-    v = u_0 + \sqrt{1 - \beta^2}\, (u - u_0) + \beta\, w, \qquad w \sim \mathcal N(0, C),
+    v = u_0 + \frac{2-\delta}{2+\delta}\, (u - u_0) + \frac{\sqrt{8\delta}}{2+\delta}\,
+    w, \qquad w \sim \mathcal N(0, C),
     $$
 
-    where ``step_width`` corresponds to the parameter $\beta \in (0,1)$. The move
+    where ``step_width`` corresponds to the parameter $\delta \in (0,2)$. The move
     preserves the prior (reference) measure and therefore yields a simple Metropolis-Hastings
     acceptance probability
 
@@ -143,7 +159,7 @@ class pCNAlgorithm(MCMCAlgorithm):
     Args:
         model (MCMCModel): Provides potential $\Phi$ and preconditioner actions
             encoding the covariance operator $C$ and reference point $u_0$.
-        step_width (float): The proposal scaling $\beta \in (0,1)$. Smaller values
+        step_width (float): The proposal scaling $\delta \in (0,2)$. Smaller values
             give higher acceptance but slower exploration; larger values explore faster until
             acceptance deteriorates.
 
@@ -157,6 +173,15 @@ class pCNAlgorithm(MCMCAlgorithm):
     """
 
     def __init__(self, model: model.MCMCModel, step_width: float) -> None:
+        r"""Initialize pCN algorithm.
+
+        Args:
+            model (MCMCModel): Provides potential $\Phi$ and preconditioner actions
+                encoding the covariance operator $C$ and reference point $u_0$.
+            step_width (float): The proposal scaling $\delta \in (0,1)$. Smaller values
+                give higher acceptance but slower exploration; larger values explore faster until
+                acceptance deteriorates.
+        """
         super().__init__(model, step_width)
         self._cached_args_current: pCNCachedArgs = pCNCachedArgs()
         self._cached_args_proposal: pCNCachedArgs = pCNCachedArgs()
@@ -192,9 +217,9 @@ class pCNAlgorithm(MCMCAlgorithm):
         """
         random_increment = rng.normal(size=state.shape)
         random_increment = self._model.compute_preconditioner_sqrt_action(random_increment)
-        proposal = self._model.reference_point + 1 / (2 + self._step_width) * (
-            (2 - self._step_width) * (state - self._model.reference_point)
-            + np.sqrt(8 * self._step_width) * random_increment
+        proposal = self._model.reference_point + (
+            (2 - self._step_width) / (2 + self._step_width) * (state - self._model.reference_point)
+            + np.sqrt(8 * self._step_width) / (2 + self._step_width) * random_increment
         )
         return proposal
 
@@ -208,7 +233,6 @@ class pCNAlgorithm(MCMCAlgorithm):
         For pCN the proposal ratio cancels, yielding ``min(1, exp(-Phi(v) + Phi(u)))``.
 
         Args:
-
             current_state (np.ndarray): Current state ``u``.
             proposal (np.ndarray): Proposed state ``v``.
 

@@ -17,6 +17,7 @@ class MCMCStorage(ABC):
     """Abstract base class for MCMC sample storage."""
 
     def __init__(self) -> None:
+        """Initialize storage."""
         self._samples = []
 
     @abstractmethod
@@ -41,17 +42,24 @@ class NumpyStorage(MCMCStorage):
     """In-memory storage using numpy arrays."""
 
     def store(self, sample: np.ndarray[tuple[int], np.dtype[np.floating]]) -> None:
+        """Stores sample."""
         self._samples.append(sample)
 
     @property
     def values(self) -> np.ndarray[tuple[int, int], np.dtype[np.floating]]:
+        """Return all stored samples as numpy array."""
         stacked_samples = np.stack(self._samples, axis=0)
         return stacked_samples
 
     def flush(self) -> None:
+        """Does nothing except log an error, since NumpyStorage does not support storage to disk.
+
+        Use ZarrStorage if you want storage to disk.
+        """
         logger = logging.getLogger(__name__)
         logger.error(
-            "Flushing to disk is not intended for In-memory only NumpyStorage. Please use ZarrStorage or another Storage class."
+            "Flushing to disk is not intended for In-memory only NumpyStorage."
+            "Please use ZarrStorage or another Storage class."
         )
 
 
@@ -72,7 +80,8 @@ class ZarrStorage(MCMCStorage):
             save_directory: Path where the Zarr store will be created.
             chunk_size: Number of samples to accumulate before writing to disk.
                 Must be greater than zero.
-            zarr_storage_group: If specified this zarr_storage_group is used instead of creating a new one.
+            zarr_storage_group: If specified this zarr_storage_group is used
+                instead of creating a new one.
             In this case save_directory can be set to None.
             overwrite: Whether to overwrite the data at save_directory or not. Defaults to False.
         """
@@ -120,13 +129,15 @@ class ZarrStorage(MCMCStorage):
             return z_storage
 
     def store(self, sample: np.ndarray[tuple[int], np.dtype[np.floating]]) -> None:
+        """Add sample to ZarrStorage."""
         self._samples.append(sample)
         if len(self._samples) >= self._chunk_size:
             self._save_to_disk()
             self._samples.clear()
 
     @property
-    def values(self) -> zarr.array:
+    def values(self) -> zarr.Array:
+        """Returns ZarrArray containing all the samples."""
         self._save_to_disk()
         self._samples.clear()
         return self._storage
@@ -145,4 +156,5 @@ class ZarrStorage(MCMCStorage):
             self._storage.append(samples_to_store, axis=0)
 
     def flush(self) -> None:
+        """Save all values to disk."""
         self._save_to_disk()

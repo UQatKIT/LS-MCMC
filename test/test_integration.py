@@ -1,7 +1,9 @@
-import numpy as np
 from pathlib import Path
 
-from lsmcmc import algorithms, logging, output, sampling, storage, model
+import numpy as np
+import pytest
+
+from lsmcmc import algorithms, logging, model, output, sampling, storage
 
 
 class BananaModel(model.DifferentiableMCMCModel):
@@ -24,11 +26,9 @@ class BananaModel(model.DifferentiableMCMCModel):
     @staticmethod
     def evaluate_gradient_of_potential(state: np.ndarray) -> np.ndarray:
         x, y = state[0], state[1]
-        # d/dx
-        dV_dx = 10 * 2 * (x**2 - y) * 2 * x - x
-        # d/dy
-        dV_dy = 10 * 2 * (x**2 - y) * (-1) + 4 * y**3 - y
-        return np.array([dV_dx, dV_dy])
+        dv_dx = 10 * 2 * (x**2 - y) * 2 * x - x
+        dv_dy = 10 * 2 * (x**2 - y) * (-1) + 4 * y**3 - y
+        return np.array([dv_dx, dv_dy])
 
     def compute_preconditioner_sqrt_action(self, state: np.ndarray) -> np.ndarray:
         action = self._preconditioner_sqrt_matrix @ state
@@ -40,9 +40,13 @@ class BananaModel(model.DifferentiableMCMCModel):
 
 
 class GaussModel(model.DifferentiableMCMCModel):
-    r"""2D Gaussian target with given mean and covariance, exposing $\Phi(x)$ and $\nabla\Phi(x)$"""
+    r"""2D Gaussian with given mean and covariance, exposing $\Phi(x)$ and $\nabla\Phi(x)$."""
 
-    def __init__(self, mean, cov) -> None:
+    def __init__(
+        self,
+        mean: np.ndarray[tuple[int], np.dtype[np.floating]],
+        cov: np.ndarray[tuple[int, int], np.dtype[np.floating]],
+    ) -> None:
         self._reference_point = np.array([0.0, 0.0])
         self._preconditioner_sqrt_matrix = np.identity(2)
         mean = np.array(mean)
@@ -76,9 +80,13 @@ class GaussModel(model.DifferentiableMCMCModel):
         return self._reference_point
 
 
-def test_banana_model_pCN() -> None:
-    """Integration test: pCN sampling on BananaModel and output collection."""
-    # Set up outputs
+@pytest.fixture
+def sample_storage() -> storage.MCMCStorage:
+    return storage.NumpyStorage()
+
+
+@pytest.fixture
+def outputs() -> tuple[output.MCMCOutput]:
     acceptance_rate_output = output.Acceptance()
     c0_output = output.SimplifiedOutput(output.ComponentQoI(0), output.IdentityStatistic())
     running_mean_c0_output = output.SimplifiedOutput(
@@ -87,25 +95,37 @@ def test_banana_model_pCN() -> None:
     batch_mean_c0_output = output.SimplifiedOutput(
         output.ComponentQoI(0), output.BatchMeanStatistic(1000)
     )
-    outputs = (acceptance_rate_output, c0_output, running_mean_c0_output, batch_mean_c0_output)
+    return (acceptance_rate_output, c0_output, running_mean_c0_output, batch_mean_c0_output)
 
-    # Logger and sampler settings
-    logger_settings = logging.LoggerSettings(
-        do_printing=False,  # Disable printing for test
-        logfile_path=Path("logfile_test.log"),
-        write_mode="w",
-    )
-    sampler_settings = sampling.SamplerRunSettings(
-        num_samples=1000,
+
+@pytest.fixture
+def sampler_settings() -> sampling.SamplerRunSettings:
+    return sampling.SamplerRunSettings(
+        num_samples=10000,
         initial_state=np.array([-0.5, 0.2]),
         print_interval=500,
         store_interval=1,
     )
 
-    # Set up sampler
-    sample_storage = storage.NumpyStorage()
+
+@pytest.fixture
+def logger(tmp_path: Path) -> logging.MCMCLogger:
+    logfile_path = tmp_path / "logfile_test.log"
+    logger_settings = logging.LoggerSettings(
+        do_printing=False,  # Disable printing for test
+        logfile_path=logfile_path,
+    )
+    return logging.MCMCLogger(logger_settings)
+
+
+def test_banana_model_pCN(
+    sample_storage: storage.MCMCStorage,
+    outputs: tuple[output.MCMCOutput],
+    sampler_settings: sampling.SamplerRunSettings,
+    logger: logging.MCMCLogger,
+) -> None:
+    """Integration test: pCN sampling on BananaModel and output collection."""
     posterior_model = BananaModel()
-    logger = logging.MCMCLogger(logger_settings)
     algorithm = algorithms.pCNAlgorithm(posterior_model, step_width=0.4)
     sampler = sampling.Sampler(algorithm, sample_storage, outputs, logger)
 
@@ -123,36 +143,14 @@ def test_banana_model_pCN() -> None:
     assert len(outputs_result) == 4
 
 
-def test_banana_model_MALA() -> None:
+def test_banana_model_MALA(
+    sample_storage: storage.MCMCStorage,
+    outputs: tuple[output.MCMCOutput],
+    sampler_settings: sampling.SamplerRunSettings,
+    logger: logging.MCMCLogger,
+) -> None:
     """Integration test: MALA sampling on BananaModel and output collection."""
-    # Set up outputs
-    acceptance_rate_output = output.Acceptance()
-    c0_output = output.SimplifiedOutput(output.ComponentQoI(0), output.IdentityStatistic())
-    running_mean_c0_output = output.SimplifiedOutput(
-        output.ComponentQoI(0), output.RunningMeanStatistic()
-    )
-    batch_mean_c0_output = output.SimplifiedOutput(
-        output.ComponentQoI(0), output.BatchMeanStatistic(1000)
-    )
-    outputs = (acceptance_rate_output, c0_output, running_mean_c0_output, batch_mean_c0_output)
-
-    # Logger and sampler settings
-    logger_settings = logging.LoggerSettings(
-        do_printing=False,  # Disable printing for test
-        logfile_path=Path("logfile_test.log"),
-        write_mode="w",
-    )
-    sampler_settings = sampling.SamplerRunSettings(
-        num_samples=1000,
-        initial_state=np.array([-0.5, 0.2]),
-        print_interval=500,
-        store_interval=1,
-    )
-
-    # Set up sampler
-    sample_storage = storage.NumpyStorage()
     posterior_model = BananaModel()
-    logger = logging.MCMCLogger(logger_settings)
     algorithm = algorithms.MALAAlgorithm(posterior_model, step_width=0.4)
     sampler = sampling.Sampler(algorithm, sample_storage, outputs, logger)
 
@@ -170,38 +168,16 @@ def test_banana_model_MALA() -> None:
     assert len(outputs_result) == 4
 
 
-def test_gauss_model_pCN() -> None:
+def test_gauss_model_pCN(
+    sample_storage: storage.MCMCStorage,
+    outputs: tuple[output.MCMCOutput],
+    sampler_settings: sampling.SamplerRunSettings,
+    logger: logging.MCMCLogger,
+) -> None:
     """Integration test: pCN on GaussModel; verifies sample mean and covariance."""
-    # Set up outputs
-    acceptance_rate_output = output.Acceptance()
-    c0_output = output.SimplifiedOutput(output.ComponentQoI(0), output.IdentityStatistic())
-    running_mean_c0_output = output.SimplifiedOutput(
-        output.ComponentQoI(0), output.RunningMeanStatistic()
-    )
-    batch_mean_c0_output = output.SimplifiedOutput(
-        output.ComponentQoI(0), output.BatchMeanStatistic(1000)
-    )
-    outputs = (acceptance_rate_output, c0_output, running_mean_c0_output, batch_mean_c0_output)
-
-    # Logger and sampler settings
-    logger_settings = logging.LoggerSettings(
-        do_printing=False,  # Disable printing for test
-        logfile_path=Path("logfile_test.log"),
-        write_mode="w",
-    )
-    sampler_settings = sampling.SamplerRunSettings(
-        num_samples=10000,
-        initial_state=np.array([1, 2]),
-        print_interval=500,
-        store_interval=1,
-    )
-
-    # Set up sampler
     mean = np.array([1, 2])
     cov = np.array([[1, 0], [0, 1]])
-    sample_storage = storage.NumpyStorage()
     posterior_model = GaussModel(mean=mean, cov=cov)
-    logger = logging.MCMCLogger(logger_settings)
     algorithm = algorithms.pCNAlgorithm(posterior_model, step_width=0.1)
     sampler = sampling.Sampler(algorithm, sample_storage, outputs, logger, seed=0)
 
@@ -219,46 +195,32 @@ def test_gauss_model_pCN() -> None:
     assert len(outputs_result) == 4
 
     # True sampling check
-    assert np.linalg.norm(np.mean(samples.values, axis=0) - mean) < 0.2, (
-        "mean too far from true mean, maybe stochastic error"
+    sample_mean = np.mean(samples.values, axis=0)
+    mean_msg = (
+        "Mean too far from true mean, maybe stochastic error. "
+        f"True mean: {mean}, sample mean: {sample_mean}"
     )
-    assert np.linalg.norm(np.cov(samples.values, rowvar=False) - cov) < 0.3, (
-        "cov too far from true cov, maybe stochastic error"
+    assert np.linalg.norm(sample_mean - mean) < 0.2, mean_msg
+    sample_cov = np.cov(samples.values, rowvar=False)
+    cov_msg = (
+        "Mean too far from true mean, maybe stochastic error. "
+        f"True cov: {cov}, sample mean: {sample_cov}"
     )
+    assert np.linalg.norm(sample_cov - cov) < 0.3, cov_msg
 
 
-def test_gauss_model_MALA() -> None:
+def test_gauss_model_MALA(
+    sample_storage: storage.MCMCStorage,
+    outputs: tuple[output.MCMCOutput],
+    sampler_settings: sampling.SamplerRunSettings,
+    logger: logging.MCMCLogger,
+) -> None:
     """Integration test: MALA on GaussModel; verifies sample mean and covariance."""
-    # Set up outputs
-    acceptance_rate_output = output.Acceptance()
-    c0_output = output.SimplifiedOutput(output.ComponentQoI(0), output.IdentityStatistic())
-    running_mean_c0_output = output.SimplifiedOutput(
-        output.ComponentQoI(0), output.RunningMeanStatistic()
-    )
-    batch_mean_c0_output = output.SimplifiedOutput(
-        output.ComponentQoI(0), output.BatchMeanStatistic(1000)
-    )
-    outputs = (acceptance_rate_output, c0_output, running_mean_c0_output, batch_mean_c0_output)
-
-    # Logger and sampler settings
-    logger_settings = logging.LoggerSettings(
-        do_printing=False,  # Disable printing for test
-        logfile_path=Path("logfile_test.log"),
-        write_mode="w",
-    )
-    sampler_settings = sampling.SamplerRunSettings(
-        num_samples=10000,
-        initial_state=np.array([1, 2]),
-        print_interval=500,
-        store_interval=1,
-    )
-
     # Set up sampler
     mean = np.array([1, 2])
     cov = np.array([[1, 0], [0, 1]])
     sample_storage = storage.NumpyStorage()
     posterior_model = GaussModel(mean=mean, cov=cov)
-    logger = logging.MCMCLogger(logger_settings)
     algorithm = algorithms.MALAAlgorithm(posterior_model, step_width=0.1)
     sampler = sampling.Sampler(algorithm, sample_storage, outputs, logger, seed=0)
 
@@ -277,8 +239,10 @@ def test_gauss_model_MALA() -> None:
 
     # true sampling check
     assert np.linalg.norm(np.mean(samples.values, axis=0) - mean) < 0.2, (
-        "mean too far from true mean, maybe stochastic error"
+        f"mean too far from true mean, maybe stochastic error. \
+            True mean: {mean}, sample cov: {np.mean(samples.values, axis=0)}"
     )
     assert np.linalg.norm(np.cov(samples.values, rowvar=False) - cov) < 0.3, (
-        "cov too far from true cov, maybe stochastic error"
+        f"cov too far from true cov, maybe stochastic error. \
+            True cov: {cov}, sample cov: {np.cov(samples.values, rowvar=False)}"
     )

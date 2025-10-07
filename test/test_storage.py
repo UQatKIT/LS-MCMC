@@ -1,3 +1,5 @@
+"""Tests concerning the disk storage."""
+
 from pathlib import Path
 
 import numpy as np

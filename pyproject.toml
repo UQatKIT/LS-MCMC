@@ -7,7 +7,7 @@ maintainers = [
     { name = "Maximilian Kruse", email = "maximilian.kruse@kit.edu" },
     { name = "Felix Racz", email = "felix.racz@kit.edu" },
 ]
-name = "lsmcmc"
+name = "ls-mcmc"
 description = "A light-weight library for large-scale Markov Chain Monte Carlo sampling"
 license = { text = "MIT" }
 readme = "README.md"
@@ -87,7 +87,7 @@ testpaths = ["test"]
 addopts = [
     "-v",
     "--import-mode=importlib",
-#    "--cov=ls-mcmc",
+    "--cov=ls_mcmc",
 #    "--cov-config=.coveragerc",
 ]
 markers = [

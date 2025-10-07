@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import zarr
 
-from lsmcmc import storage
+from ls_mcmc import storage
 
 
 def test_zarr_storage_store_and_read(tmp_path: Path) -> None:

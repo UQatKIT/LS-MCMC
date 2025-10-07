@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from lsmcmc import algorithms, logging, model, output, sampling, storage
+from ls_mcmc import algorithms, logging, model, output, sampling, storage
 
 
 class BananaModel(model.DifferentiableMCMCModel):

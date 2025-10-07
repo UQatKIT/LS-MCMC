@@ -1,4 +1,3 @@
-import shutil
 from pathlib import Path
 
 import numpy as np
@@ -6,12 +5,10 @@ import zarr
 
 from lsmcmc import storage
 
-TMP_PATH = Path("./test")
 
-
-def test_zarr_storage_store_and_read() -> None:
+def test_zarr_storage_store_and_read(tmp_path: Path) -> None:
     """Test storing samples in ZarrStorage and reading them back."""
-    save_dir = TMP_PATH / "zarr_test"
+    save_dir = tmp_path / "zarr_test"
     chunk_size = 5
     num_samples = 12
     dim = 3
@@ -32,4 +29,3 @@ def test_zarr_storage_store_and_read() -> None:
     zarr_array = zarr_group["values"]
 
     np.testing.assert_equal(zarr_array[:], np.stack(samples))
-    shutil.rmtree(Path(TMP_PATH / "zarr_test.zarr"))

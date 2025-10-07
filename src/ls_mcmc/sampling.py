@@ -1,4 +1,9 @@
-"""Main Sampler that handles the algorithm, output and storage of samples."""
+"""Main Sampler that handles the algorithm, output and storage of samples.
+
+Classes:
+    SamplerRunSettings: Settings for a sampler run
+    Sampler: Main sampler that runs the MCMC loop
+"""
 
 import pickle
 import signal
@@ -35,7 +40,7 @@ class SamplerRunSettings:
 
 
 @dataclass
-class SamplerCheckpoint:
+class _SamplerCheckpoint:
     """Checkpoint data for resuming MCMC sampling.
 
     Attributes:
@@ -55,7 +60,12 @@ class SamplerCheckpoint:
 
 # ==================================================================================================
 class Sampler:
-    """MCMC sampler that runs a given algorithm and manages outputs, logging, and storage."""
+    """MCMC sampler that runs a given algorithm and manages outputs, logging, and storage.
+
+    Methods:
+        resume_from_checkpoint: Resume sampling from a saved checkpoint
+        run: Run the main MCMC loop
+    """
 
     def __init__(
         self,
@@ -99,7 +109,7 @@ class Sampler:
         if not checkpoint_path.exists():
             raise FileNotFoundError(f"Could not find checkpoint: {checkpoint_path}")
         with Path.open(checkpoint_path, "rb") as f:
-            checkpoint: SamplerCheckpoint = pickle.load(f)
+            checkpoint: _SamplerCheckpoint = pickle.load(f)
 
         sampler = cls(
             algorithm=algorithm,
@@ -195,7 +205,7 @@ class Sampler:
 
         # save chain sate (i.e. rnga and some metadata)
         try:
-            checkpoint = SamplerCheckpoint(
+            checkpoint = _SamplerCheckpoint(
                 iteration=self._iteration,
                 current_state=self._current_state.copy(),
                 rng_state=self._rng.bit_generator.state,

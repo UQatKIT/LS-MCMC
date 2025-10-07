@@ -1,4 +1,9 @@
-"""Simple logger for tracking MCMC sampling."""
+"""Simple logger for tracking MCMC sampling.
+
+Classes:
+    LoggerSettings: Data class for logger settings
+    MCMCLogger: Custom Logger class
+"""
 
 import logging
 import sys
@@ -25,7 +30,16 @@ class LoggerSettings:
 
 # ==================================================================================================
 class MCMCLogger:
-    """Logger for MCMC sampling with console and file output support."""
+    """Logger for MCMC sampling with console and file output support.
+
+    Methods:
+        log_header: Log formatted header for MCMC output
+        log_outputs: Log all outputs
+        info: Pass info message to underlying Python logger
+        debug: Pass debug message to underlying Python logger
+        error: Pass error message to underlying Python logger
+        exception Pass exception message to underlying Python logger
+    """
 
     def __init__(self, logger_settings: LoggerSettings) -> None:
         """Initialize the MCMC logger with specified settings.

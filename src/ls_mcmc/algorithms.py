@@ -1,4 +1,10 @@
-"""Implementation of core MCMC algorithms."""
+"""Implementation of core MCMC algorithms.
+
+Classes:
+    MCMCAlgorith: abstract base class used for all MCMCAlgorithms
+    pCNAlgorithm: Implementation of the pCN algorithm
+    MALAAlgorithm: Implementation of the MALA (pCNL) algorithm
+"""
 
 import dataclasses
 from abc import ABC, abstractmethod
@@ -11,7 +17,7 @@ from . import model
 
 # ==================================================================================================
 @dataclass
-class CachedArgs:
+class _CachedArgs:
     """Base class for argument caches used in MCMCAlgorithm."""
 
     def clear(self) -> None:
@@ -25,6 +31,9 @@ class MCMCAlgorithm(ABC):
 
     Subclasses must implement proposal generation and the acceptance probability.
     This class handles the generic propose/accept-reject step and caching handoff.
+
+    Methods:
+        compute_step: Compute one step of MCMC
     """
 
     def __init__(self, model: model.MCMCModel, step_width: float) -> None:
@@ -41,8 +50,8 @@ class MCMCAlgorithm(ABC):
             raise ValueError("Step width must be greater than zero.")
         self._step_width = step_width
         self._model = model
-        self._cached_args_current: CachedArgs | None = None  # derived class should set this
-        self._cached_args_proposal: CachedArgs | None = None  # derived class should set this
+        self._cached_args_current: _CachedArgs | None = None  # derived class should set this
+        self._cached_args_proposal: _CachedArgs | None = None  # derived class should set this
 
     def compute_step(
         self, current_state: np.ndarray[tuple[int], np.dtype[np.floating]], rng: np.random.Generator
@@ -128,7 +137,7 @@ class MCMCAlgorithm(ABC):
 
 # ==================================================================================================
 @dataclass
-class pCNCachedArgs(CachedArgs):
+class _pCNCachedArgs(_CachedArgs):
     """Argument cache for pCN algorithm."""
 
     potential: float | None = None
@@ -156,12 +165,8 @@ class pCNAlgorithm(MCMCAlgorithm):
     \alpha(u,v) = 1 \wedge \exp\big( -\Phi(v) + \Phi(u) \big).
     $$
 
-    Args:
-        model (MCMCModel): Provides potential $\Phi$ and preconditioner actions
-            encoding the covariance operator $C$ and reference point $u_0$.
-        step_width (float): The proposal scaling $\delta \in (0,2)$. Smaller values
-            give higher acceptance but slower exploration; larger values explore faster until
-            acceptance deteriorates.
+    Methods:
+        compute_step: Compute one step of MCMC
 
     Notes:
         The proposal leaves the Gaussian reference measure invariant; only the potential
@@ -183,8 +188,8 @@ class pCNAlgorithm(MCMCAlgorithm):
                 acceptance deteriorates.
         """
         super().__init__(model, step_width)
-        self._cached_args_current: pCNCachedArgs = pCNCachedArgs()
-        self._cached_args_proposal: pCNCachedArgs = pCNCachedArgs()
+        self._cached_args_current: _pCNCachedArgs = _pCNCachedArgs()
+        self._cached_args_proposal: _pCNCachedArgs = _pCNCachedArgs()
 
     def _cache_args(
         self, potential_current: float | None = None, potential_proposal: float | None = None
@@ -256,7 +261,7 @@ class pCNAlgorithm(MCMCAlgorithm):
 
 # ==================================================================================================
 @dataclass
-class MALACachedArgs(CachedArgs):
+class _MALACachedArgs(_CachedArgs):
     r"""Cache container for MALA intermediate quantities.
 
     Attributes:
@@ -287,6 +292,9 @@ class MALAAlgorithm(MCMCAlgorithm):
     w \sim \mathcal N(0, C).
     $$
 
+    Methods:
+        compute_step: Compute one step of MCMC
+
     Notes:
         The preconditioner implicitly encodes the covariance operator $C$ of
         the reference Gaussian prior.
@@ -308,11 +316,11 @@ class MALAAlgorithm(MCMCAlgorithm):
         """
         super().__init__(model, step_width)
         self._model = model
-        self._cached_args_current: MALACachedArgs = MALACachedArgs()
-        self._cached_args_proposal: MALACachedArgs = MALACachedArgs()
+        self._cached_args_current: _MALACachedArgs = _MALACachedArgs()
+        self._cached_args_proposal: _MALACachedArgs = _MALACachedArgs()
 
     def _populate_cache(
-        self, cache: MALACachedArgs, state: np.ndarray[tuple[int], np.dtype[np.floating]]
+        self, cache: _MALACachedArgs, state: np.ndarray[tuple[int], np.dtype[np.floating]]
     ) -> None:
         """Populates cache with necessary arguments for the proposal and accept-reject step.
 

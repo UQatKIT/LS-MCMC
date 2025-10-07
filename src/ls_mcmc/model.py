@@ -10,13 +10,16 @@ $$
 
 where $\mu_0 = \mathcal{N}(0, C)$ is a centered Gaussian reference measure
 with covariance operator $C$.
-The Likelihood is then given via the potential $\Phi(u)$.
+The likelihood is then given via the potential $\Phi(u)$.
 Models should at least implement calculating the potential $\Phi(u)$ and the action
 (i.e. matrix vector product in the finite dimensional setting)
 of the covariance operator $C$ on a vector.
 The covariace operator is also sometimes called preconditioner.
 
-
+Classes:
+    MCMCModel: Abstract base class for an MCMC model that evaluates the likelihood
+    DifferentiableMCMCModel: Abstract base class for an MCMC model that evaluates the likelihood
+        and also derivative information on the potential of the likelihood
 References:
     Cotter, Roberts, Stuart, White (2013). *MCMC Methods for Functions: Modifying Old
     Algorithms to Make Them Faster.* Statistical Science 28(3).
@@ -29,7 +32,13 @@ import numpy as np
 
 # ==================================================================================================
 class MCMCModel(ABC):
-    """Base interface for MCMC target models."""
+    """Base interface for MCMC target models.
+
+    Methods:
+        evaluate_potential: Compute potential of likelihood
+        compute_preconditioner_sqrt_action: Apply preconditioner on a state
+        reference_point: Reference point that can be used to make sampling more effective
+    """
 
     @abstractmethod
     def evaluate_potential(self, state: np.ndarray[tuple[int], np.dtype[np.floating]]) -> float:
@@ -59,7 +68,15 @@ class MCMCModel(ABC):
 
 
 class DifferentiableMCMCModel(MCMCModel):
-    """Extension of MCMCModel with differentiable potential."""
+    """Extension of MCMCModel with differentiable potential.
+
+    Methods:
+        evaluate_potential: Compute potential of likelihood
+        compute_preconditioner_sqrt_action: Apply square root of preconditioner on a state
+        reference_point: Reference point that can be used to make sampling more effective
+        evaluate_gradient_of_potential: Compute the gradient of the potential of the likelihood
+        compute_preconditioner_action: Apply preconditioner on a state
+    """
 
     @abstractmethod
     def evaluate_gradient_of_potential(

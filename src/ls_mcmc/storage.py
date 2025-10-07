@@ -1,6 +1,11 @@
 """Custom storage interface for MCMC sampling.
 
 The custom interface is built in a way to enable storage of samples directly to the disk.
+
+Classes:
+    MCMCStorage: Abstract base class for storages
+    NumpyStorage: Simple in memory storage
+    ZarrStorage: Storage with a Zarr backend that saves samples to disk automatically
 """
 
 import logging
@@ -14,7 +19,13 @@ import zarr
 
 # ==================================================================================================
 class MCMCStorage(ABC):
-    """Abstract base class for MCMC sample storage."""
+    """Abstract base class for MCMC sample storage.
+
+    Methods:
+        store: Store a new sample
+        values: return all stored samples
+        flush: flush samples to disk
+    """
 
     def __init__(self) -> None:
         """Initialize storage."""
@@ -39,7 +50,13 @@ class MCMCStorage(ABC):
 
 # ==================================================================================================
 class NumpyStorage(MCMCStorage):
-    """In-memory storage using numpy arrays."""
+    """In-memory storage using numpy arrays.
+
+    Methods:
+        store: Store a new sample
+        values: return all stored samples
+        flush: Not intended to be used
+    """
 
     def store(self, sample: np.ndarray[tuple[int], np.dtype[np.floating]]) -> None:
         """Stores sample."""
@@ -65,7 +82,14 @@ class NumpyStorage(MCMCStorage):
 
 # ==================================================================================================
 class ZarrStorage(MCMCStorage):
-    """Disk-based storage using Zarr with chunking."""
+    """Disk-based storage using Zarr with chunking.
+
+    Methods:
+        store: Store a new sample
+        values: return all stored samples
+        flush: flush samples to disk
+        initialize_from_disk: Initialize Zarr Storage from existing storage on the disk
+    """
 
     def __init__(
         self,

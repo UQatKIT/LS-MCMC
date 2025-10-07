@@ -73,6 +73,10 @@ ignore = [
     "RET504",
     "S101",
     "TRY003",
+    "N801",
+    "FBT002",
+    "S301",
+    "G004",
 ]
 pydocstyle.convention = "google"
 per-file-ignores = { "test/*" = ["D100", "D102", "D103", "D107", "INP001", "N802"] }

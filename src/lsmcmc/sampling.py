@@ -6,6 +6,7 @@ import time
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
+from types import FrameType
 
 import numpy as np
 
@@ -30,7 +31,7 @@ class SamplerRunSettings:
     initial_state: np.ndarray[tuple[int], np.dtype[np.floating]]
     print_interval: int = 1
     store_interval: int = 1
-    checkpoint_path: Path = Path("sampler_checkpoint.pickle")
+    checkpoint_path: Path = Path(CHECKPOINT_PATH)
 
 
 @dataclass
@@ -69,7 +70,8 @@ class Sampler:
         Args:
             algorithm (algorithms.MCMCAlgorithm): The MCMC algorithm to use.
             sample_storage (storage.MCMCStorage, optional): Storage for samples (e.g. disk).
-            outputs (Iterable[output.MCMCOutput], optional): Outputs to compute during sampling for logging.
+            outputs (Iterable[output.MCMCOutput], optional): Outputs to compute during sampling
+                for logging.
             logger (logging.MCMCLogger, optional): Logger for progress and diagnostics.
             seed (int, optional): Random seed for reproducibility.
         """
@@ -91,6 +93,7 @@ class Sampler:
         logger: logging.MCMCLogger,
         checkpoint_path: Path | None = None,
     ) -> "Sampler":
+        """Resume sampling from a saved checkpoint."""
         if not checkpoint_path:
             checkpoint_path = Path(CHECKPOINT_PATH)
         if not checkpoint_path.exists():
@@ -109,6 +112,18 @@ class Sampler:
         checkpoint.run_settings.initial_state = checkpoint.current_state
         return sampler.run(run_settings=checkpoint.run_settings, iteration=checkpoint.iteration)
 
+    def _verify_run_settings(self, run_settings: SamplerRunSettings) -> None:
+        if run_settings.num_samples <= 0:
+            raise ValueError("Number of samples must be greater than zero.")
+        if run_settings.print_interval <= 0:
+            raise ValueError("Print interval must be greater than zero.")
+        if run_settings.store_interval <= 0:
+            raise ValueError("Store interval must be greater than zero.")
+        if run_settings.print_interval > run_settings.num_samples:
+            raise ValueError("Print interval must be less than the number of samples.")
+        if run_settings.store_interval > run_settings.num_samples:
+            raise ValueError("Store interval must be less than the number of samples.")
+
     def run(
         self, run_settings: SamplerRunSettings, iteration: int = 0
     ) -> tuple[storage.MCMCStorage, Iterable[output.MCMCOutput]]:
@@ -123,51 +138,47 @@ class Sampler:
             tuple[storage.MCMCStorage, Iterable[output.MCMCOutput]]:
                 The sample storage and the outputs after sampling.
         """
-        if run_settings.num_samples <= 0:
-            raise ValueError("Number of samples must be greater than zero.")
-        if run_settings.print_interval <= 0:
-            raise ValueError("Print interval must be greater than zero.")
-        if run_settings.store_interval <= 0:
-            raise ValueError("Store interval must be greater than zero.")
-        if run_settings.print_interval > run_settings.num_samples:
-            raise ValueError("Print interval must be less than the number of samples.")
-        if run_settings.store_interval > run_settings.num_samples:
-            raise ValueError("Store interval must be less than the number of samples.")
+        self._verify_run_settings(run_settings)
 
         self._setup_handlers()
-        current_state = run_settings.initial_state
+        self._current_state = run_settings.initial_state
         self._num_samples = run_settings.num_samples
         self._print_interval = run_settings.print_interval
         self._store_interval = run_settings.store_interval
         self._start_time = time.time()
         if iteration == 0:
-            self._run_utilities(iteration, current_state, accepted=True)
+            self._run_utilities(iteration, self._current_state, accepted=True)
+
+        # save sample variables as class members for correct termination handling
+        self._iteration = 1 + iteration
+        self._run_settings = run_settings
 
         try:
             for i in range(1 + iteration, self._num_samples):
-                if self._terminate:
-                    self._handle_termination(current_state, i - 1, run_settings)
-                    break
-                new_state, accepted = self._algorithm.compute_step(current_state, self._rng)
+                self._iteration = i
+                new_state, accepted = self._algorithm.compute_step(self._current_state, self._rng)
                 self._run_utilities(i, new_state, accepted=accepted)
-                current_state = new_state
-        except BaseException as exc:
-            self._logger.exception(exc)
-        finally:
+                self._current_state = new_state
+                if self._terminate:
+                    break
+        except BaseException:
+            self._logger.exception("An Error occured during sampling.")
+        else:
+            self._iteration = None
+            self._current_state = None
+            self._run_settings = None
             return self._samples, self._outputs
 
     def _setup_handlers(self) -> None:
-        def handler(signum, frame):
+        def _handler(_signum: int, _frame: FrameType | None) -> None:
             self._terminate = True
+            self._handle_termination()
 
-        signal.signal(signal.SIGTERM, handler)
-        signal.signal(signal.SIGINT, handler)
+        signal.signal(signal.SIGTERM, _handler)
+        signal.signal(signal.SIGINT, _handler)
 
     def _handle_termination(
         self,
-        state: np.ndarray[tuple[int], np.dtype[np.floating]],
-        iteration: int,
-        run_settings: SamplerRunSettings,
     ) -> None:
         if self._logger:
             self._logger.info("Received stop signal, shutting down gracefully.")
@@ -178,26 +189,26 @@ class Sampler:
                 self._samples.flush()
                 if self._logger:
                     self._logger.info("Storage flushing complete.")
-            except Exception as e:
+            except BaseException:
                 if self._logger:
-                    self._logger.error(f"Failed to flush samples: {e}")
+                    self._logger.exception("Failed to flush samples.")
 
         # save chain sate (i.e. rnga and some metadata)
         try:
             checkpoint = SamplerCheckpoint(
-                iteration=iteration,
-                current_state=state.copy(),
+                iteration=self._iteration,
+                current_state=self._current_state.copy(),
                 rng_state=self._rng.bit_generator.state,
-                run_settings=run_settings,
+                run_settings=self._run_settings,
                 outputs_state=self._outputs,
             )
-            with Path.open(run_settings.checkpoint_path, "wb") as f:
+            with Path.open(self._run_settings.checkpoint_path, "wb") as f:
                 pickle.dump(checkpoint, f)
             if self._logger:
-                self._logger.info(f"Checkpoint saved to {run_settings.checkpoint_path}")
-        except Exception as e:
+                self._logger.info(f"Checkpoint saved to {self._run_settings.checkpoint_path}")
+        except BaseException:
             if self._logger:
-                self._logger.error(f"Failed to save checkpoint: {e}")
+                self._logger.exception("Failed to save checkpoint.")
 
     def _run_utilities(
         self, it: int, state: np.ndarray[tuple[int], np.dtype[np.floating]], accepted: bool

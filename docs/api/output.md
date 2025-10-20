@@ -1,3 +1,3 @@
 # Output
 
-::: lsmcmc.output
+::: ls_mcmc.output

@@ -1,3 +1,3 @@
 # Algorithms
 
-::: lsmcmc.algorithms
+::: ls_mcmc.algorithms

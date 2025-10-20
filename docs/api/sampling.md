@@ -1,3 +1,3 @@
 # Sampling
 
-::: lsmcmc.sampling
+::: ls_mcmc.sampling

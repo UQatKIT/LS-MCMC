@@ -1,3 +1,3 @@
 # Storage
 
-::: lsmcmc.storage
+::: ls_mcmc.storage

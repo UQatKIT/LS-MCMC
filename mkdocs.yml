@@ -3,11 +3,11 @@
 # ==================================================================================================
 # -- Site metadata ---------------------------------------------------------------------------------
 docs_dir: docs/
-site_name: lsmcmc
+site_name: ls-mcmc
 site_author: Felix Racz
 site_description: Example repo on how to use MKDocs with the group template
-repo_url: https://example.org
-repo_name: lsmcmc
+repo_url: https://github.com/UQatKIT/LS-MCMC
+repo_name: ls-mcmc
 
 # -- Material theme configuration ------------------------------------------------------------------
 theme:
@@ -114,7 +114,7 @@ extra_css:
 nav:
   - Getting Started: index.md
   - Usage:
-      - Example Usage: usage/usage.md
+      - Usage: usage/usage.md
   - API Reference:
       - Algorithms: api/algorithms.md
       - Logging: api/logging.md

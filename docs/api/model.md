@@ -1,3 +1,3 @@
 # Model
 
-::: lsmcmc.model
+::: ls_mcmc.model

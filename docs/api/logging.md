@@ -1,3 +1,3 @@
 # Logging
 
-::: lsmcmc.logging
+::: ls_mcmc.logging

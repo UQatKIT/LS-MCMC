@@ -8,9 +8,9 @@ It is most likely not the fastest MCMC library out there, but it is quick to use
 
 
 ### Key Features
-:material-checkbox-marked-circle-outline: &nbsp; **pCN and MALA support** <br>
-:material-checkbox-marked-circle-outline: &nbsp; **On-Disk sample storage** <br>
-:material-checkbox-marked-circle-outline: &nbsp; **Graceful exit on errors** <br>
+- **pCN and MALA support** <br>
+- **On-Disk sample storage** <br>
+- **Graceful exit on errors** <br>
 
 
 Markov-Chain-Monte-Carlo Methods aim to sample from an unknown probability measure $\mu$ that is known up to a normalization constant.

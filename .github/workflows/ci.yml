@@ -1,0 +1,66 @@
+name: CI
+run-name: Continuous Integration for PRs or changes to main branch
+
+# -- Trigger Events --------------------------------------------------------------------------------
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, reopened, edited, ready_for_review]
+    branches:
+      - main
+
+# -- Jobs ------------------------------------------------------------------------------------------
+jobs:
+  # Format code with Ruff (checks for failure)
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        id: checkout-code
+        uses: actions/checkout@v4
+      - name: Format with ruff
+        id: format-with-ruff
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "format"
+
+  # Build documentation without deploying
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        id: checkout-code
+        uses: actions/checkout@v4
+      - name: Install uv
+        id: setup-uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        id: install-deps
+        run: uv lock && uv sync --group docs --group dev
+      - name: Build MkDocs documentation
+        id: build-docs
+        run: uv run mkdocs build
+
+  # Run tests with Pytest
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        id: checkout-code
+        uses: actions/checkout@v4
+      - name: Install uv
+        id: setup-uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        id: install-deps
+        run: uv lock && uv sync --group test --group dev
+      - name: Run tests with Pytest
+        id: run-tests
+        run: uv run pytest

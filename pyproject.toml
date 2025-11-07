@@ -79,7 +79,7 @@ ignore = [
     "G004",
 ]
 pydocstyle.convention = "google"
-per-file-ignores = { "test/*" = ["D100", "D102", "D103", "D107", "INP001", "N802"] }
+per-file-ignores = { "test/*" = ["D100", "D102", "D103", "D107", "INP001", "N802"], "examples/*" = ["INP", "D", "N"]}
 
 # --------------------------------------------------------------------------------------------------
 [tool.pytest.ini_options]

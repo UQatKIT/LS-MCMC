@@ -38,7 +38,7 @@ class MCMCLogger:
         info: Pass info message to underlying Python logger
         debug: Pass debug message to underlying Python logger
         error: Pass error message to underlying Python logger
-        exception Pass exception message to underlying Python logger
+        exception: Pass exception message to underlying Python logger
     """
 
     def __init__(self, logger_settings: LoggerSettings) -> None:

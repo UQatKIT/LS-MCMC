@@ -106,7 +106,7 @@ class ZarrStorage(MCMCStorage):
                 Must be greater than zero.
             zarr_storage_group: If specified this zarr_storage_group is used
                 instead of creating a new one.
-            In this case save_directory can be set to None.
+                In this case save_directory can be set to None.
             overwrite: Whether to overwrite the data at save_directory or not. Defaults to False.
         """
         if chunk_size <= 0:

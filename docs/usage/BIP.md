@@ -178,4 +178,4 @@ Number of discretization points: 400, acceptance rate: 0.690600000000001
 
 The output indeed shows, that the acceptance rate is independent of the underlying discretization.
 
-The full example code can be found under [https://github.com/UQatKIT/LS-MCMC/tree/main/examples/example_bip.ipynb](examples/example_bip.ipynb)
+The full example code can be found under [examples/example_bip.ipynb](https://github.com/UQatKIT/LS-MCMC/tree/main/examples/example_bip.ipynb).

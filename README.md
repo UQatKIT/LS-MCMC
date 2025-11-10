@@ -1,6 +1,6 @@
 ![CI](https://img.shields.io/github/actions/workflow/status/UQatKIT/LS-MCMC/ci.yml?label=CI)
 ![Docs](https://img.shields.io/github/actions/workflow/status/UQatKIT/LS-MCMC/docs.yml?label=Docs)
-![License](https://img.shields.io/github/license/LS-MCMC)
+![License](https://img.shields.io/github/license/UQatKIT/LS-MCMC)
 ![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)
 
 # Large Scale MCMC Library

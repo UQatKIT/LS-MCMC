@@ -115,6 +115,7 @@ nav:
   - Getting Started: index.md
   - Usage:
       - Usage: usage/usage.md
+      - BIP: usage/BIP.md
   - API Reference:
       - Algorithms: api/algorithms.md
       - Logging: api/logging.md

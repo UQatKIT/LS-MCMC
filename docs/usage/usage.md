@@ -19,7 +19,7 @@ The reference measure is assumed to be a zero-mean Gaussian with covariance oper
 $\mu_0 = \mathcal N(0, C)$. The reference measure can often be chosen as the prior.
 
 ## Model description
-As a user you need to define the reference measure $\mu_0$ and the potential $\Phi$ to for the library to use. This is done via the [`MCMCModel`][lsmcmc.model.MCMCModel] or [`DifferentiableMCMCModel`][lsmcmc.model.DifferentiableMCMCModel] classes.
+As a user you need to define the reference measure $\mu_0$ and the potential $\Phi$ to for the library to use. This is done via the [`MCMCModel`][ls_mcmc.model.MCMCModel] or [`DifferentiableMCMCModel`][ls_mcmc.model.DifferentiableMCMCModel] classes.
 For our toy model we will consider the reference Gaussian measure $\mathcal N(0, I)$.
 The potential is then given by
 
@@ -33,12 +33,12 @@ $$
 
 For the covariance operator, we only need to evaluate it's action on a state $u$.
 More precisely the action of $C^{\frac{1}{2}}$ (and of $C$ for MALA aswell).
-The covariance operator is implemented via it's action in [`compute_preconditioner_sqrt_action`][lsmcmc.model.MCMCModel.compute_preconditioner_sqrt_action]
+The covariance operator is implemented via it's action in [`compute_preconditioner_sqrt_action`][ls_mcmc.model.MCMCModel.compute_preconditioner_sqrt_action]
 
 Implemented as a model this would read:
 ```py
 import numpy as np
-from lsmcmc import model
+from ls_mcmc import model
 
 class GaussModel(model.DifferentiableMCMCModel):
     r"""Gaussian target with given mean and covariance, exposing $\Phi(x)$ and $\nabla\Phi(x)$"""
@@ -75,16 +75,16 @@ class GaussModel(model.DifferentiableMCMCModel):
 
 ## Sampling
 To start the sampling process, we need 4 other components.
-- A choice of a [`MCMCAlgorithm`][lsmcmc.algorithms.MCMCAlgorithm].
-- A storage for the samples via [`MCMCStorage`][lsmcmc.storage.MCMCStorage] that stores the samples,
+- A choice of a [`MCMCAlgorithm`][ls_mcmc.algorithms.MCMCAlgorithm].
+- A storage for the samples via [`MCMCStorage`][ls_mcmc.storage.MCMCStorage] that stores the samples,
 this library provides a simple in memory storage and one storage via Zarr that can be used to store samples to the disk automatically.
-- A list of [`MCMCOutput`][lsmcmc.output.MCMCOutput]s for logging purpose, e.g. acceptance rate, component mean etc.
-- An instance of a [`MCMCLogger`][lsmcmc.logging.MCMCLogger] that deals with the actual logging.
+- A list of [`MCMCOutput`][ls_mcmc.output.MCMCOutput]s for logging purpose, e.g. acceptance rate, component mean etc.
+- An instance of a [`MCMCLogger`][ls_mcmc.logging.MCMCLogger] that deals with the actual logging.
 
 A minimal working example could look like
 
 ```py
-from lsmcmc import algorithms, logging, output, sampling, storage
+from ls_mcmc import algorithms, logging, output, sampling, storage
 
 model = GaussModel(np.array([0, 0]), np.array([[1,0],[0,1]])) # N(0, I) 2D-Gaussian
 
@@ -131,16 +131,16 @@ The ZarrStorage interface can be used as follow:
 sample_storage = storage.ZarrStorage(Path("./storage"), chunk_size=10)
 ```
 The `chunk_size` denotes how many samples are stored In-Memory before they are being flushed to the disk.
-The [`ZarrStorage`][lsmcmc.storage.ZarrStorage] can be used in the sampler the same way as the [`NumpyStorage`][lsmcmc.storage.NumpyStorage].
+The [`ZarrStorage`][ls_mcmc.storage.ZarrStorage] can be used in the sampler the same way as the [`NumpyStorage`][ls_mcmc.storage.NumpyStorage].
 
-The [`ZarrStorage`][lsmcmc.storage.ZarrStorage] has the advantage, that it supports a graceful exit and tries to save all samples if an exit signal is received.
+The [`ZarrStorage`][ls_mcmc.storage.ZarrStorage] has the advantage, that it supports a graceful exit and tries to save all samples if an exit signal is received.
 
 ### Restarting a chain
-If your program exits unexpectedly, and you used the [`ZarrStorage`][lsmcmc.storage.ZarrStorage] the chain can be restarted.
+If your program exits unexpectedly, and you used the [`ZarrStorage`][ls_mcmc.storage.ZarrStorage] the chain can be restarted.
 If a termination signal (e.g. SIGTERM or SIGINT) is received, the sampler tries to store all samples that are not yet stored to the disk, as well as the state of the sampler including rng.
 Restarting a chain can look is similar to the initial start.
 ```py
-from lsmcmc import algorithms, logging, output, sampling, storage
+from ls_mcmc import algorithms, logging, output, sampling, storage
 
 model = GaussModel(np.array([0, 0]), np.array([[1,0],[0,1]])) # N(0, I) 2D-Gaussian
 

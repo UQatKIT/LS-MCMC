@@ -1,3 +1,8 @@
+![CI](https://img.shields.io/github/actions/workflow/status/UQatKIT/LS-MCMC/ci.yaml?label=CI)
+![Docs](https://img.shields.io/github/actions/workflow/status/UQatKIT/LS-MCMC/docs.yaml?label=Docs)
+![License](https://img.shields.io/github/license/LS-MCMC/Eikonax)
+![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)
+
 # Large Scale MCMC Library
 A lightweight, modular library developed for large-scale Markov Chain Monte Carlo.
 In particular, it implements algorithms that are infinite-dimensionally consistent to ensure discretization independent

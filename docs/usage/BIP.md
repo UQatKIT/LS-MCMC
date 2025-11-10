@@ -1,5 +1,5 @@
 # Bayesian Inverse Problem
-This example shows how one can sample from the posterior if a toy Bayesian Inverse Problem (BIP) with this library.
+This example shows how one can sample from the posterior of a toy Bayesian Inverse Problem (BIP) with this library.
 
 # Setup
 Consider the 1D Poisson Equation:
@@ -13,7 +13,7 @@ $$
 
 
 The PDE defines the PDE solution operator $S: L^2((0, 1)) \to H^1_0((0, 1)): a(x) \to u(x)$.
-In most applications we don't have access to the whole PDE solution, but just some observed data at dirscrete points,
+In most applications we don't have access to the whole PDE solution, but just some observed data at discrete points,
 so we consider the observation operator: $G: L^2((0,1)) \to \mathbb R^d: a(x) \to u(x)\mid_{x_1, \ldots x_d}$
 The inverse problem is now:
 
@@ -28,7 +28,7 @@ $$
 With this we can use MCMC to sample from $\mu^y$ given the forward operator.
 
 For simplicity, we implemented the PDE solve using [scikit-fem](https://github.com/kinnala/scikit-fem),
-of course you can use also use any other PDE library.
+of course you can also use any other PDE library.
 
 The forward operator could then look like this:
 

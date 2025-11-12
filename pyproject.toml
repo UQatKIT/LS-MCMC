@@ -11,7 +11,7 @@ name = "ls-mcmc"
 description = "A light-weight library for large-scale Markov Chain Monte Carlo sampling"
 license = { text = "MIT" }
 readme = "README.md"
-version = "0.0.1"
+dynamic = ["version"]
 requires-python = ">=3.12"
 keywords = [
     "markov chain monte carlo",
@@ -99,5 +99,9 @@ markers = [
 ]
 
 [build-system]
-requires = ["uv_build>=0.8.22,<0.9.0"]
-build-backend = "uv_build"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
